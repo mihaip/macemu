@@ -7,6 +7,8 @@
 
 #include <slirp.h>
 
+#error 'dont include me'
+
 int if_mtu, if_mru;
 int if_comp;
 int if_maxlinkhdr;

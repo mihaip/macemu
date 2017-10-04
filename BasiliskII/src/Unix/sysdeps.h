@@ -501,6 +501,9 @@ static inline uae_u32 do_byteswap_16(uae_u32 v)
 #ifndef REGPARAM
 # define REGPARAM
 #endif
+#ifdef REGPARAM
+# define REGPARAM
+#endif
 #define REGPARAM2
 
 #endif

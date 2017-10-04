@@ -33,6 +33,9 @@ INSTALL = @INSTALL@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_DATA = @INSTALL_DATA@
 
+macemujs_conf_native = @macemujs_conf_native@
+
+
 SLIRP_CFLAGS = @SLIRP_CFLAGS@
 SLIRP_SRCS = @SLIRP_SRCS@
 SLIRP_OBJS = $(SLIRP_SRCS:../slirp/%.c=obj/%.o)
@@ -179,6 +182,22 @@ distclean: clean
 depend dep:
 	makedepend $(CPPFLAGS) -Y. $(SRCS) 2>/dev/null
 
+
+$(OBJ_DIR)/build68k_native.o : build68k.c
+	gcc $(CPPFLAGS) $(DEFS) $(CFLAGS) -c $< -o $@
+$(OBJ_DIR)/gencpu_native.o : gencpu.c
+	gcc $(CPPFLAGS) $(DEFS) $(CFLAGS) -c $< -o $@
+$(OBJ_DIR)/gencomp_native.o : gencomp.c
+	gcc $(CPPFLAGS) $(DEFS) $(CFLAGS) -c $< -o $@
+$(OBJ_DIR)/readcpu.o : readcpu.cpp
+	$(CXX) $(CPPFLAGS) $(DEFS) $(CXXFLAGS) -c $< -o $@
+$(OBJ_DIR)/readcpu_native.o : readcpu.cpp
+	g++ $(CPPFLAGS) $(DEFS) $(CXXFLAGS) -c $< -o $@
+$(OBJ_DIR)/cpudefs.o : cpudefs.cpp
+	$(CXX) $(CPPFLAGS) $(DEFS) $(CXXFLAGS) -c $< -o $@
+$(OBJ_DIR)/cpudefs_native.o : cpudefs.cpp
+	g++ $(CPPFLAGS) $(DEFS) $(CXXFLAGS) -c $< -o $@
+
 $(OBJ_DIR)/SDLMain.o : SDLMain.m
 	$(CC) $(CPPFLAGS) $(DEFS) $(CFLAGS) -c $< -o $@
 $(OBJ_DIR)/%.o : @top_srcdir@/../slirp/%.c
@@ -200,12 +219,12 @@ $(OBJ_DIR)/%.go : %.cpp
 $(OBJ_DIR)/%.o: %.rc
 	windres --include-dir ../Windows -i $< -o $@
 
-$(OBJ_DIR)/build68k$(EXEEXT): $(OBJ_DIR)/build68k.o
-	$(CC) $(LDFLAGS) -o $(OBJ_DIR)/build68k$(EXEEXT) $(OBJ_DIR)/build68k.o
-$(OBJ_DIR)/gencpu$(EXEEXT): $(OBJ_DIR)/gencpu.o $(OBJ_DIR)/readcpu.o $(OBJ_DIR)/cpudefs.o
-	$(CXX) $(LDFLAGS) -o $(OBJ_DIR)/gencpu$(EXEEXT) $(OBJ_DIR)/gencpu.o $(OBJ_DIR)/readcpu.o $(OBJ_DIR)/cpudefs.o
-$(OBJ_DIR)/gencomp$(EXEEXT): $(OBJ_DIR)/gencomp.o $(OBJ_DIR)/readcpu.o $(OBJ_DIR)/cpudefs.o
-	$(CXX) $(LDFLAGS) -o $(OBJ_DIR)/gencomp$(EXEEXT) $(OBJ_DIR)/gencomp.o $(OBJ_DIR)/readcpu.o $(OBJ_DIR)/cpudefs.o
+$(OBJ_DIR)/build68k$(EXEEXT): $(OBJ_DIR)/build68k_native.o
+	gcc $(LDFLAGS) -o $(OBJ_DIR)/build68k$(EXEEXT) $(OBJ_DIR)/build68k_native.o
+$(OBJ_DIR)/gencpu$(EXEEXT): $(OBJ_DIR)/gencpu_native.o $(OBJ_DIR)/readcpu_native.o $(OBJ_DIR)/cpudefs_native.o
+	g++ $(LDFLAGS) -o $(OBJ_DIR)/gencpu$(EXEEXT) $(OBJ_DIR)/gencpu_native.o $(OBJ_DIR)/readcpu_native.o $(OBJ_DIR)/cpudefs_native.o
+$(OBJ_DIR)/gencomp$(EXEEXT): $(OBJ_DIR)/gencomp_native.o $(OBJ_DIR)/readcpu_native.o $(OBJ_DIR)/cpudefs_native.o
+	g++ $(LDFLAGS) -o $(OBJ_DIR)/gencomp$(EXEEXT) $(OBJ_DIR)/gencomp_native.o $(OBJ_DIR)/readcpu_native.o $(OBJ_DIR)/cpudefs_native.o
 
 cpudefs.cpp: $(OBJ_DIR)/build68k$(EXEEXT) @top_srcdir@/../uae_cpu/table68k
 	$(OBJ_DIR)/build68k$(EXEEXT) <@top_srcdir@/../uae_cpu/table68k >cpudefs.cpp

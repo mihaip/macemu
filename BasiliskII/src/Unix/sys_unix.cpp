@@ -50,6 +50,7 @@
 #endif
 #endif
 #endif
+#undef __MACOSX__
 
 #include "main.h"
 #include "macos_util.h"

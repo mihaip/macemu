@@ -90,6 +90,11 @@ dnl Canonical system information.
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
 
+
+AC_ARG_VAR(macemujs_conf_native, compile for native target)
+AC_ARG_VAR(macemujs_conf_cpu, compile for cpu codegen)
+
+
 dnl Target OS type (target is host if not cross-compiling).
 case "$target_os" in
   linux*)	OS_TYPE=linux;;
@@ -288,7 +293,13 @@ AS_IF([test  "x$have_libvhd" = "xyes" ], [
 
 
 dnl We want pthreads. Try libpthread first, then libc_r (FreeBSD), then PTL.
-HAVE_PTHREADS=yes
+
+if [[ -z "${macemujs_conf_pthreads// }" ]]; then
+  echo "skipping pthreads"
+  HAVE_PTHREADS=no
+else
+  HAVE_PTHREADS=yes
+fi
 AC_CHECK_LIB(pthread, pthread_create, , [
   AC_CHECK_LIB(c_r, pthread_create, , [
     AC_CHECK_LIB(PTL, pthread_create, , [
@@ -296,14 +307,17 @@ AC_CHECK_LIB(pthread, pthread_create, , [
     ])
   ])
 ])
+
+
+
 if [[ "x$HAVE_PTHREADS" = "xyes" ]]; then
   AC_DEFINE(HAVE_PTHREADS, 1, [Define if pthreads are available.])
+  AC_CHECK_FUNCS(pthread_cond_init)
+  AC_CHECK_FUNCS(pthread_cancel pthread_testcancel)
+  AC_CHECK_FUNCS(pthread_mutexattr_setprotocol)
+  AC_CHECK_FUNCS(pthread_mutexattr_settype)
+  AC_CHECK_FUNCS(pthread_mutexattr_setpshared)
 fi
-AC_CHECK_FUNCS(pthread_cond_init)
-AC_CHECK_FUNCS(pthread_cancel pthread_testcancel)
-AC_CHECK_FUNCS(pthread_mutexattr_setprotocol)
-AC_CHECK_FUNCS(pthread_mutexattr_settype)
-AC_CHECK_FUNCS(pthread_mutexattr_setpshared)
 
 dnl If POSIX.4 semaphores are not available, we emulate them with pthread mutexes.
 SEMSRC=
@@ -609,13 +623,23 @@ AC_CHECK_FRAMEWORK(IOKit, [#include <IOKit/IOKitLib.h>])
 AC_CHECK_FRAMEWORK(CoreFoundation, [#include <CoreFoundation/CoreFoundation.h>])
 
 dnl Select system-dependant source files.
-SERIALSRC=serial_unix.cpp
+dnl SERIALSRC=serial_unix.cpp
+SERIALSRC=../dummy/serial_dummy.cpp
 ETHERSRC=../dummy/ether_dummy.cpp
 SCSISRC=../dummy/scsi_dummy.cpp
 AUDIOSRC=../dummy/audio_dummy.cpp
 EXTFSSRC=extfs_unix.cpp
 EXTRASYSSRCS=
 CAN_NATIVE_M68K=no
+
+
+if [[ -z "${macemujs_conf_native_os// }" ]]; then
+  echo "skipping network"
+
+  echo "using audio_oss_esd"
+  AUDIOSRC=audio_oss_esd.cpp
+else
+  echo "target_os=$target_os"
 case "$target_os" in
 linux*)
   ETHERSRC=ether_unix.cpp
@@ -684,7 +708,14 @@ cygwin*)
   EXTRASYSSRCS="../Windows/BasiliskII.rc"
   ;;
 esac
+fi
 
+
+dnl if [[ -z "${macemujs_conf_native// }" ]]; then
+
+if [[ true ]]; then
+  echo "skipping slirp"
+else
 dnl Is the slirp library supported?
 case "$ac_cv_have_byte_bitfields" in
 yes|"guessing yes")
@@ -703,6 +734,7 @@ if [[ -n "$CAN_SLIRP" ]]; then
     ../slirp/ip_input.c  ../slirp/socket.c     ../slirp/udp.c"
 fi
 AC_SUBST(SLIRP_SRCS)
+fi
 
 if [[ "x$WANT_MACOSX_GUI" = "xyes" ]]; then
   CPPFLAGS="$CPPFLAGS -I../MacOSX"
@@ -735,7 +767,9 @@ if [[ "x$WANT_SDL_VIDEO" = "xyes" ]]; then
   AC_DEFINE(USE_SDL_VIDEO, 1, [Define to enable SDL video graphics support])
   VIDEOSRCS="../SDL/video_sdl.cpp"
   KEYCODES="../SDL/keycodes"
-  if [[ "x$ac_cv_framework_Carbon" = "xyes" ]]; then
+  if [[ "true" ]]; then
+      EXTRASYSSRCS="$EXTRASYSSRCS ../dummy/clip_dummy.cpp"
+  elif [[ "x$ac_cv_framework_Carbon" = "xyes" ]]; then
     AC_MSG_CHECKING([whether __LP64__ is defined])
     AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#if !defined(__LP64__)
                                          # error __LP64__ not defined
@@ -797,6 +831,13 @@ if [[ "x$HAVE_PTHREADS" = "xno" ]]; then
   ETHERSRC=../dummy/ether_dummy.cpp
   AUDIOSRC=../dummy/audio_dummy.cpp
 fi
+
+dnl HACK TO REMOVE DEPS
+dnl if [[ -z $macemujs_conf_native ]]; then
+dnl SERIALSRC=../dummy/serial_dummy.cpp
+dnl ETHERSRC=../dummy/ether_dummy.cpp
+dnl AUDIOSRC=../dummy/audio_dummy.cpp
+dnl fi
 SYSSRCS="$VIDEOSRCS $EXTFSSRC $SERIALSRC $ETHERSRC $SCSISRC $AUDIOSRC $SEMSRC $UISRCS $MONSRCS $EXTRASYSSRCS"
 
 dnl Define a macro that translates a yesno-variable into a C macro definition
@@ -1076,6 +1117,14 @@ AC_CACHE_CHECK([whether sigaction handlers need to be reinstalled],
 AC_TRANSLATE_DEFINE(SIGACTION_NEED_REINSTALL, "$ac_cv_sigaction_need_reinstall",
   [Define if your system requires sigactions to be reinstalled.])
 
+
+if [[ -n "${macemujs_conf_cpu// }" ]]; then
+  echo "skipping mach exceptions detection"
+  ac_cv_have_mach_exceptions=no
+elif [[ "yes" ]]; then
+  echo "skipping mach exceptions detection"
+  ac_cv_have_mach_exceptions=no
+else
 dnl Check if Mach exceptions supported.
 AC_CACHE_CHECK([whether your system supports Mach exceptions],
   ac_cv_have_mach_exceptions, [
@@ -1100,6 +1149,7 @@ AC_CACHE_CHECK([whether your system supports Mach exceptions],
   AC_LANG_RESTORE
   ]
 )
+fi
 AC_TRANSLATE_DEFINE(HAVE_MACH_EXCEPTIONS, "$ac_cv_have_mach_exceptions",
   [Define if your system supports Mach exceptions.])
 
@@ -1273,6 +1323,8 @@ if [[ -n "$LINKER_SCRIPT_FLAGS" ]]; then
 fi
 AC_TRANSLATE_DEFINE(HAVE_LINKER_SCRIPT, "$ac_cv_linker_script_works",
   [Define if there is a linker script to relocate the executable above 0x70000000.])
+
+
 
 dnl Determine the addressing mode to use
 if [[ "x$WANT_NATIVE_M68K" = "xyes" ]]; then
@@ -1457,6 +1509,11 @@ dnl Other platforms should define their own set of noflags file variants
 CAN_JIT=no
 JITSRCS="compemu1.cpp compemu2.cpp compemu3.cpp compemu4.cpp compemu5.cpp compemu6.cpp compemu7.cpp compemu8.cpp"
 
+
+if [[ -n "${macemujs_conf_cpu// }" ]]; then
+  echo "skipping assembly optimizations"
+else
+
 if [[ "x$HAVE_GCC27" = "xyes" -a "x$HAVE_I386" = "xyes" ]]; then
   dnl i386 CPU
   DEFINES="$DEFINES -DUNALIGNED_PROFITABLE -DREGPARAM=\"__attribute__((regparm(3)))\""
@@ -1502,6 +1559,8 @@ elif [[ "x$WANT_NATIVE_M68K" = "xyes" ]]; then
   dnl Native m68k, no emulation
   CPUINCLUDES="-I../native_cpu"
   CPUSRCS="asm_support.s"
+fi
+
 fi
 
 dnl Enable JIT compiler, if possible.
@@ -1622,8 +1681,10 @@ struct possibility table [] =
   elif grep 'format:.BMHEXF.:tamrof' conftest.dmp >/dev/null 2>&1; then
     ac_cv_c_float_format='IBM 370 hex'
   else
-    AC_MSG_ERROR(Unknown floating point format)
-  fi],
+dnl AC_MSG_ERROR(Unknown floating point format)
+    ac_cv_c_float_format="IEEE (little-endian)"
+  fi
+  ],
   [AC_MSG_ERROR(compile failed)])
 ])
 # IEEE is the default format.  If the float endianness isn't the same

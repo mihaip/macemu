@@ -166,6 +166,57 @@ static bool open_dsp(void)
 	return true;
 }
 
+
+// Init using the js device, returns false on error
+static bool open_js(void)
+{
+
+#if WORDS_BIGENDIAN
+	little_endian = false;
+#else
+	little_endian = true;
+#endif
+	silence_byte = 0;	// Is this correct for 8-bit mode?
+
+	// fake some stuff
+	audio_fd = 69;
+
+	printf("Using JS audio output\n");
+
+	// JS supports a variety of twisted little audio formats, all different
+	if (audio_sample_sizes.empty()) {
+
+		// The reason we do this here is that we don't want to add sample
+		// rates etc. unless the JS connection could be opened
+		// (if JS fails, dsp might be tried next)
+		audio_sample_rates.push_back(11025 << 16);
+		audio_sample_rates.push_back(22050 << 16);
+		audio_sample_rates.push_back(44100 << 16);
+		audio_sample_sizes.push_back(8);
+		audio_sample_sizes.push_back(16);
+		audio_channel_counts.push_back(1);
+		audio_channel_counts.push_back(2);
+
+		// Default to highest supported values
+		audio_sample_rate_index = audio_sample_rates.size() - 1;
+		audio_sample_size_index = audio_sample_sizes.size() - 1;
+		audio_channel_count_index = audio_channel_counts.size() - 1;
+	}
+
+	// Sound buffer size = 4096 frames
+	audio_frames_per_block = 4096;
+
+
+
+#ifdef EMSCRIPTEN
+	EM_ASM_({
+  	Module.openAudio($0, $1, $2, $3);
+	}, audio_sample_rates[audio_sample_rate_index] >> 16, audio_sample_sizes[audio_sample_size_index], audio_channel_counts[audio_channel_count_index], audio_frames_per_block);
+#endif
+
+	return true;
+}
+
 // Init using ESD, returns false on error
 static bool open_esd(void)
 {
@@ -239,6 +290,12 @@ static bool open_esd(void)
 
 static bool open_audio(void)
 {
+
+#ifdef EMSCRIPTEN
+	if (open_js())
+		goto dev_opened;
+#endif
+
 #ifdef ENABLE_ESD
 	// If ESPEAKER is set, the user probably wants to use ESD, so try that first
 	if (getenv("ESPEAKER"))
@@ -407,7 +464,7 @@ static void *stream_func(void *arg)
 
 				// Send data to DSP
 				if (work_size == sound_buffer_size && !little_endian)
-					write(audio_fd, Mac2HostAddr(ReadMacInt32(apple_stream_info + scd_buffer)), sound_buffer_size);
+					audio_write(audio_fd, Mac2HostAddr(ReadMacInt32(apple_stream_info + scd_buffer)), sound_buffer_size);
 				else {
 					// Last buffer or little-endian DSP
 					if (little_endian) {
@@ -417,7 +474,7 @@ static void *stream_func(void *arg)
 					} else
 						Mac2Host_memcpy(last_buffer, ReadMacInt32(apple_stream_info + scd_buffer), work_size);
 					memset((uint8 *)last_buffer + work_size, silence_byte, sound_buffer_size - work_size);
-					write(audio_fd, last_buffer, sound_buffer_size);
+					audio_write(audio_fd, last_buffer, sound_buffer_size);
 				}
 				D(bug("stream: data written\n"));
 			} else
@@ -426,12 +483,27 @@ static void *stream_func(void *arg)
 		} else {
 
 			// Audio not active, play silence
-silence:	write(audio_fd, silent_buffer, sound_buffer_size);
+silence:	audio_write(audio_fd, silent_buffer, sound_buffer_size);
 		}
 	}
 	delete[] silent_buffer;
 	delete[] last_buffer;
 	return NULL;
+}
+
+static ssize_t audio_write(int audio_fd, const void *buf, size_t buf_nbytes) {
+
+	#ifdef EMSCRIPTEN
+
+		EM_ASM_({
+			Module.enqueueAudio($0, $1);
+		}, buf, buf_nbytes);
+
+		return 0;
+	#else
+
+	return write(audio_fd, buf, buf_nbytes);
+	#endif
 }
 
 

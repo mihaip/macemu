@@ -1,0 +1,38 @@
+
+# make for native without pthreads
+
+```
+macemujs_conf_native=1 ./_embuild.sh 
+make clean
+make
+./BasiliskII
+```
+
+- ?? uses VOSF for screen update
+- ?? requires mach exceptions for VOSF
+- requires mach exceptions for handling bad accesses
+
+
+# make for native with pthreads
+
+```
+macemujs_conf_native=1 macemujs_conf_pthreads=1 ./_embuild.sh 
+make clean
+make
+./BasiliskII
+```
+- uses timer thread for screen update
+- requires mach exceptions for handling bad accesses (maybe not needed?)
+
+
+
+# make for browser with pthreads
+
+```
+# (once, otherwise configure will say c compiler is broken)
+source ~/code/tools/emsdk_portable/emsdk_env.sh
+
+macemujs_conf_pthreads=1 ./_embuild.sh 
+make clean
+make
+``

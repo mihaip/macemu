@@ -247,7 +247,7 @@ static int vm_acquire_mac_fixed(void *addr, size_t size)
 
 static sigsegv_return_t sigsegv_handler(sigsegv_info_t *sip)
 {
-	const uintptr fault_address = (uintptr)sigsegv_get_fault_address(sip);
+	const uintptr fault_address = (uintptr_t)sigsegv_get_fault_address(sip);
 #if ENABLE_VOSF
 	// Handle screen fault
 	extern bool Screen_fault_handler(sigsegv_info_t *sip);
@@ -520,6 +520,9 @@ int main(int argc, char **argv)
 		if (!PrefsEditor())
 			QuitEmulator();
 
+#ifdef HAVE_MACH_EXCEPTIONS
+
+	printf("HAVE_MACH_EXCEPTIONS");
 	// Install the handler for SIGSEGV
 	if (!sigsegv_install_handler(sigsegv_handler)) {
 		sprintf(str, GetString(STR_SIG_INSTALL_ERR), "SIGSEGV", strerror(errno));
@@ -529,6 +532,8 @@ int main(int argc, char **argv)
 	
 	// Register dump state function when we got mad after a segfault
 	sigsegv_set_dump_state(sigsegv_dump_state);
+
+#endif
 
 	// Read RAM size
 	RAMSize = PrefsFindInt32("ramsize") & 0xfff00000;	// Round down to 1MB boundary
@@ -625,6 +630,8 @@ int main(int argc, char **argv)
 	// Get rom file path from preferences
 	const char *rom_path = PrefsFindString("rom");
 
+	printf("rom_path %s\n", rom_path);
+
 	// Load Mac ROM
 	int rom_fd = open(rom_path ? rom_path : ROM_FILE_NAME, O_RDONLY);
 	if (rom_fd < 0) {
@@ -673,6 +680,7 @@ int main(int argc, char **argv)
 	FPUType = 1;	// NetBSD has an FPU emulation, so the FPU ought to be available at all times
 	TwentyFourBitAddressing = false;
 #endif
+	printf("Initialize everything\n");
 
 	// Initialize everything
 	if (!InitAll(vmdir))
@@ -737,6 +745,7 @@ int main(int argc, char **argv)
 	sigint_sa.sa_flags = 0;
 	sigaction(SIGINT, &sigint_sa, NULL);
 #endif
+	printf("services\n");
 
 #ifndef USE_CPU_EMUL_SERVICES
 #if defined(HAVE_PTHREADS)
@@ -788,7 +797,7 @@ int main(int argc, char **argv)
 	sigemptyset(&timer_sa.sa_mask);		// Block virtual 68k interrupts during SIGARLM handling
 #if !EMULATED_68K
 	sigaddset(&timer_sa.sa_mask, SIG_IRQ);
-#endif
+#endif // defined(HAVE_PTHREADS)
 	timer_sa.sa_handler = one_tick;
 	timer_sa.sa_flags = SA_ONSTACK | SA_RESTART;
 	if (sigaction(SIGALRM, &timer_sa, NULL) < 0) {
@@ -813,8 +822,10 @@ int main(int argc, char **argv)
 
 	// Start 68k and jump to ROM boot routine
 	D(bug("Starting emulation...\n"));
+	printf("Starting emulation\n");
 	Start680x0();
 
+	printf("Quit\n");
 	QuitEmulator();
 	return 0;
 }
@@ -1162,7 +1173,10 @@ static void one_tick(...)
 
 #ifndef USE_PTHREADS_SERVICES
 	// Threads not used to trigger interrupts, perform video refresh from here
+	// printf("VideoRefresh\n");
 	VideoRefresh();
+#else
+	printf("USE_PTHREADS_SERVICES\n");
 #endif
 
 #ifndef HAVE_PTHREADS

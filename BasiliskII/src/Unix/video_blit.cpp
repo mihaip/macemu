@@ -493,6 +493,7 @@ static Screen_blit_func_info Screen_blitters[] = {
 // --> In that case, VOSF is not necessary
 bool Screen_blitter_init(VisualFormat const & visual_format, bool native_byte_order, int mac_depth)
 {
+printf("Screen_blitter_init\n");	
 #if USE_SDL_VIDEO
 	const bool use_sdl_video = true;
 #else
@@ -517,6 +518,12 @@ bool Screen_blitter_init(VisualFormat const & visual_format, bool native_byte_or
 		visualFormat.Bshift = 0;
 		for (uint32 Bmask = visualFormat.Bmask; Bmask && ((Bmask & 1) != 1); Bmask >>= 1)
 			++visualFormat.Bshift;
+
+	printf("### Screen_blitter_init\n");
+	printf("\tR/G/B mask values  : 0x%06x, 0x%06x, 0x%06x (depth = %d) (mac_depth = %d)\n",
+		visualFormat.Rmask, visualFormat.Gmask, visualFormat.Bmask, visualFormat.depth, mac_depth);
+	printf("\tR/G/B shift values : %d/%d/%d\n",
+		visualFormat.Rshift, visualFormat.Gshift, visualFormat.Bshift);
 
 		// 1/2/4/8-bit mode on 8/16/32-bit screen?
 		Screen_blit = NULL;
@@ -581,6 +588,12 @@ bool Screen_blitter_init(VisualFormat const & visual_format, bool native_byte_or
 	// --> no need for specialised blitters here
 	Screen_blit = Blit_Copy_Raw;
 #endif
+
+	printf("depth=%d mac_depth=%d\n", visual_format.depth, mac_depth);
+	if (visual_format.depth == 32 && mac_depth == 8) {
+		printf("switching to Blit_Expand_8_To_32\n");
+		Screen_blit = Blit_Expand_8_To_32;
+	}
 	
 	// If the blitter simply reduces to a copy, we don't need VOSF in DGA mode
 	// --> In that case, we return FALSE
