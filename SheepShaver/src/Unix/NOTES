@@ -1,0 +1,8 @@
+
+# SDL Video
+- When enabled, originally used clip_macosx clipboard code. added hack to use clip_dummy instead
+- When disabled, uses X11 (including clip_unix)
+
+# changes
+added hack to use clip_dummy instead of clip_macosx when SDL video enabled
+added hack to disable slirp/ethernet
