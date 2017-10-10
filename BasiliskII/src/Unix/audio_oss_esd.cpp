@@ -45,6 +45,12 @@
 #include <esd.h>
 #endif
 
+#ifdef EMSCRIPTEN
+#include <emscripten.h>
+#endif
+
+#define BROWSER_AUDIO 1
+
 #define DEBUG 0
 #include "debug.h"
 
@@ -70,6 +76,7 @@ static volatile bool stream_thread_cancel = false;	// Flag: cancel streaming thr
 
 // Prototypes
 static void *stream_func(void *arg);
+static ssize_t audio_write(int audio_fd, const void *buf, size_t buf_nbytes);
 
 
 /*
@@ -87,6 +94,7 @@ static void set_audio_status_format(void)
 // Init using the dsp device, returns false on error
 static bool open_dsp(void)
 {
+	#ifndef BROWSER_AUDIO
 	// Open the device
 	const char *dsp = PrefsFindString("dsp");
 	audio_fd = open(dsp, O_WRONLY);
@@ -163,6 +171,7 @@ static bool open_dsp(void)
 	// Get sound buffer size
 	ioctl(audio_fd, SNDCTL_DSP_GETBLKSIZE, &audio_frames_per_block);
 	D(bug("DSP_GETBLKSIZE %d\n", audio_frames_per_block));
+	#endif
 	return true;
 }
 
@@ -189,13 +198,13 @@ static bool open_js(void)
 		// The reason we do this here is that we don't want to add sample
 		// rates etc. unless the JS connection could be opened
 		// (if JS fails, dsp might be tried next)
-		audio_sample_rates.push_back(11025 << 16);
+		// audio_sample_rates.push_back(11025 << 16);
 		audio_sample_rates.push_back(22050 << 16);
-		audio_sample_rates.push_back(44100 << 16);
-		audio_sample_sizes.push_back(8);
+		// audio_sample_rates.push_back(44100 << 16);
+		// audio_sample_sizes.push_back(8);
 		audio_sample_sizes.push_back(16);
 		audio_channel_counts.push_back(1);
-		audio_channel_counts.push_back(2);
+		// audio_channel_counts.push_back(2);
 
 		// Default to highest supported values
 		audio_sample_rate_index = audio_sample_rates.size() - 1;
@@ -207,11 +216,16 @@ static bool open_js(void)
 	audio_frames_per_block = 4096;
 
 
+	int opt_sr = (audio_sample_rates[audio_sample_rate_index] >> 16);
+	int opt_ss = audio_sample_sizes[audio_sample_size_index];
+	int opt_ch = audio_channel_counts[audio_channel_count_index];
 
-#ifdef EMSCRIPTEN
+#if defined(EMSCRIPTEN) && !defined(__EMSCRIPTEN_PTHREADS__)
 	EM_ASM_({
+
   	Module.openAudio($0, $1, $2, $3);
-	}, audio_sample_rates[audio_sample_rate_index] >> 16, audio_sample_sizes[audio_sample_size_index], audio_channel_counts[audio_channel_count_index], audio_frames_per_block);
+
+	}, opt_sr, opt_ss, opt_ch, audio_frames_per_block);
 #endif
 
 	return true;
@@ -290,10 +304,11 @@ static bool open_esd(void)
 
 static bool open_audio(void)
 {
-
-#ifdef EMSCRIPTEN
-	if (open_js())
-		goto dev_opened;
+	printf("open_audio\n");
+#ifdef BROWSER_AUDIO
+		if (open_js())
+			goto dev_opened;
+	return false;
 #endif
 
 #ifdef ENABLE_ESD
@@ -323,9 +338,16 @@ dev_opened:
 	sound_buffer_size = (audio_sample_sizes[audio_sample_size_index] >> 3) * audio_channel_counts[audio_channel_count_index] * audio_frames_per_block;
 	set_audio_status_format();
 
+	#if defined(BROWSER_AUDIO) && !defined(__EMSCRIPTEN_PTHREADS__)
+		// ???
+		printf("audio would be happening now\n");
+	#else
+	printf("starting stream_thread\n");
 	// Start streaming thread
 	Set_pthread_attr(&stream_thread_attr, 0);
 	stream_thread_active = (pthread_create(&stream_thread, &stream_thread_attr, stream_func, NULL) == 0);
+	printf("stream_thread_active %d\n", stream_thread_active);
+	#endif
 
 	// Everything went fine
 	audio_open = true;
@@ -334,6 +356,7 @@ dev_opened:
 
 void AudioInit(void)
 {
+	printf("AudioInit\n");
 	// Init audio status (reasonable defaults) and feature flags
 	AudioStatus.sample_rate = 44100 << 16;
 	AudioStatus.sample_size = 16;
@@ -368,6 +391,7 @@ void AudioInit(void)
 
 static void close_audio(void)
 {
+	printf("close_audio\n");
 	// Stop stream and delete semaphore
 	if (stream_thread_active) {
 		stream_thread_cancel = true;
@@ -389,10 +413,13 @@ static void close_audio(void)
 
 void AudioExit(void)
 {
+	printf("AudioExit\n");
 	// Stop the device immediately. Otherwise, close() sends
 	// SNDCTL_DSP_SYNC, which may hang
+	#ifndef BROWSER_AUDIO
 	if (is_dsp_audio)
 		ioctl(audio_fd, SNDCTL_DSP_RESET, 0);
+	#endif
 
 	// Close audio device
 	close_audio();
@@ -430,6 +457,97 @@ void audio_exit_stream()
 	// Streaming thread is always running to avoid clicking noises
 }
 
+static int blocks_to_skip = 0;
+
+void audio_write_blocks(int blocks_to_write)
+{
+
+	while (blocks_to_skip > 0 && blocks_to_write > 0) {
+		blocks_to_write--;
+		blocks_to_skip--;
+	}
+	if (blocks_to_write == 0) {
+		printf("audio_write_blocks early return\n");
+		return;
+	}
+	
+	int failed_to_write = false;
+	size_t bytes_written = 0;
+	int blocks_written = 0;
+
+	// printf("stream_func\n");
+	int16 *silent_buffer = new int16[sound_buffer_size / 2];
+	int16 *last_buffer = new int16[sound_buffer_size / 2];
+	memset(silent_buffer, silence_byte, sound_buffer_size);
+
+	while (blocks_written < blocks_to_write) {
+		if (AudioStatus.num_sources) {
+	#ifdef EMSCRIPTEN
+		audio_fd = 99;
+	#endif
+
+			// Trigger audio interrupt to get new buffer
+			D(bug("stream: triggering irq\n"));
+			SetInterruptFlag(INTFLAG_AUDIO);
+			TriggerInterrupt();
+			D(bug("stream: waiting for ack\n"));
+			sem_wait(&audio_irq_done_sem);
+			D(bug("stream: ack received\n"));
+
+			// Get size of audio data
+			uint32 apple_stream_info = ReadMacInt32(audio_data + adatStreamInfo);
+			if (apple_stream_info) {
+				int work_size = ReadMacInt32(apple_stream_info + scd_sampleCount) * (AudioStatus.sample_size >> 3) * AudioStatus.channels;
+				D(bug("stream: work_size %d\n", work_size));
+				if (work_size > sound_buffer_size)
+					work_size = sound_buffer_size;
+				if (work_size == 0)
+					goto silence;
+
+				// Send data to DSP
+				if (work_size == sound_buffer_size && !little_endian)
+					bytes_written = audio_write(audio_fd, Mac2HostAddr(ReadMacInt32(apple_stream_info + scd_buffer)), sound_buffer_size);
+				else {
+					// Last buffer or little-endian DSP
+					if (little_endian) {
+						int16 *p = (int16 *)Mac2HostAddr(ReadMacInt32(apple_stream_info + scd_buffer));
+						for (int i=0; i<work_size/2; i++)
+							last_buffer[i] = ntohs(p[i]);
+					} else
+						Mac2Host_memcpy(last_buffer, ReadMacInt32(apple_stream_info + scd_buffer), work_size);
+					memset((uint8 *)last_buffer + work_size, silence_byte, sound_buffer_size - work_size);
+					bytes_written = audio_write(audio_fd, last_buffer, sound_buffer_size);
+				}
+				D(bug("stream: data written\n"));
+			} else
+				goto silence;
+
+		} else {
+
+			// Audio not active, play silence
+silence:
+	#ifdef EMSCRIPTEN
+		audio_fd = 1;
+	#endif
+	bytes_written = audio_write(audio_fd, silent_buffer, sound_buffer_size);
+
+
+				D(bug("stream: silence written\n"));
+		}
+		if (bytes_written == 0) {
+			failed_to_write = true;
+			break;
+		}
+		blocks_written++;
+	}
+	delete[] silent_buffer;
+	delete[] last_buffer;
+
+	if (failed_to_write) {
+		blocks_to_skip = 3;
+		printf("blocks_to_skip=%d\n", blocks_to_skip);
+	}
+}
 
 /*
  *  Streaming function
@@ -437,6 +555,7 @@ void audio_exit_stream()
 
 static void *stream_func(void *arg)
 {
+	printf("stream_func\n");
 	int16 *silent_buffer = new int16[sound_buffer_size / 2];
 	int16 *last_buffer = new int16[sound_buffer_size / 2];
 	memset(silent_buffer, silence_byte, sound_buffer_size);
@@ -492,12 +611,12 @@ silence:	audio_write(audio_fd, silent_buffer, sound_buffer_size);
 }
 
 static ssize_t audio_write(int audio_fd, const void *buf, size_t buf_nbytes) {
-
-	#ifdef EMSCRIPTEN
-
-		EM_ASM_({
-			Module.enqueueAudio($0, $1);
-		}, buf, buf_nbytes);
+	#ifdef BROWSER_AUDIO
+		#ifdef EMSCRIPTEN
+			return EM_ASM_INT({
+				return Module.enqueueAudio($0, $1, $2);
+			}, buf, buf_nbytes, audio_fd);
+		#endif
 
 		return 0;
 	#else
@@ -572,6 +691,7 @@ bool audio_get_main_mute(void)
 
 uint32 audio_get_main_volume(void)
 {
+	#ifndef BROWSER_AUDIO
 	if (mixer_fd >= 0) {
 		int vol;
 		if (ioctl(mixer_fd, SOUND_MIXER_READ_PCM, &vol) == 0) {
@@ -580,6 +700,7 @@ uint32 audio_get_main_volume(void)
 			return ((left * 256 / 100) << 16) | (right * 256 / 100);
 		}
 	}
+	#endif
 	return 0x01000100;
 }
 
@@ -590,6 +711,7 @@ bool audio_get_speaker_mute(void)
 
 uint32 audio_get_speaker_volume(void)
 {
+	#ifndef BROWSER_AUDIO
 	if (mixer_fd >= 0) {
 		int vol;
 		if (ioctl(mixer_fd, SOUND_MIXER_READ_VOLUME, &vol) == 0) {
@@ -598,6 +720,7 @@ uint32 audio_get_speaker_volume(void)
 			return ((left * 256 / 100) << 16) | (right * 256 / 100);
 		}
 	}
+	#endif
 	return 0x01000100;
 }
 
@@ -607,12 +730,14 @@ void audio_set_main_mute(bool mute)
 
 void audio_set_main_volume(uint32 vol)
 {
+	#ifndef BROWSER_AUDIO
 	if (mixer_fd >= 0) {
 		int left = vol >> 16;
 		int right = vol & 0xffff;
 		int p = ((left * 100 / 256) << 8) | (right * 100 / 256);
 		ioctl(mixer_fd, SOUND_MIXER_WRITE_PCM, &p);
 	}
+	#endif
 }
 
 void audio_set_speaker_mute(bool mute)
@@ -621,10 +746,12 @@ void audio_set_speaker_mute(bool mute)
 
 void audio_set_speaker_volume(uint32 vol)
 {
+	#ifndef BROWSER_AUDIO
 	if (mixer_fd >= 0) {
 		int left = vol >> 16;
 		int right = vol & 0xffff;
 		int p = ((left * 100 / 256) << 8) | (right * 100 / 256);
 		ioctl(mixer_fd, SOUND_MIXER_WRITE_VOLUME, &p);
 	}
+	#endif
 }

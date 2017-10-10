@@ -66,6 +66,9 @@
 #define DEBUG 1
 #include "debug.h"
 
+#define REUSE_VIDEO_BUFFER 1
+#define BROWSER_VIDEO 1
+
 #ifdef EMSCRIPTEN
 #include <emscripten.h>
 #endif
@@ -449,6 +452,9 @@ static void sdl_display_dimensions(int &width, int &height)
 
 static inline int sdl_display_width(void)
 {
+	#ifdef EMSCRIPTEN
+		return 800;
+	#endif
 	int width, height;
 	sdl_display_dimensions(width, height);
 	return width;
@@ -456,6 +462,9 @@ static inline int sdl_display_width(void)
 
 static inline int sdl_display_height(void)
 {
+	#ifdef EMSCRIPTEN
+		return 600;
+	#endif
 	int width, height;
 	sdl_display_dimensions(width, height);
 	return height;
@@ -593,6 +602,35 @@ static void migrate_screen_prefs(void)
 #endif
 }
 
+// Map RGB color to pixel value (this only works in TrueColor/DirectColor visuals)
+static inline uint32 map_rgb(uint8 red, uint8 green, uint8 blue, bool fix_byte_order = false)
+{
+  uint32 val = (red&0xff)|(green&0xff)<<8|(blue&0xff)<<16|0xff000000;
+  return val;
+
+	// uint32 val = ((red >> 8) << 0) | ((green >> 8) << 0) | ((blue >> 8) << 0);
+
+	if (fix_byte_order) {
+		// We have to fix byte order in the ExpandMap[]
+		// NOTE: this is only an optimization since Screen_blitter_init()
+		// could be arranged to choose an NBO or OBO (with
+		// byteswapping) Blit_Expand_X_To_Y() function
+		switch (32) {
+		case 15: case 16:
+			val = do_byteswap_16(val);
+			break;
+		case 24: case 32:
+			val = do_byteswap_32(val);
+			break;
+		}
+	}
+	return val;
+}
+
+__attribute__((noinline))
+void free_browser_pixels(uint8 *browser_pixels) {
+	free(browser_pixels);
+}
 
 /*
  *  Display "driver" classes
@@ -621,6 +659,8 @@ public:
 
 	bool init_ok;	// Initialization succeeded (we can't use exceptions because of -fomit-frame-pointer)
 	SDL_Surface *s;	// The surface we draw into
+
+	// uint8 *browser_pixels;
 };
 
 class driver_window;
@@ -667,6 +707,7 @@ driver_base::driver_base(SDL_monitor_desc &m)
 {
 	the_buffer = NULL;
 	the_buffer_copy = NULL;
+	// browser_pixels = NULL;
 }
 
 driver_base::~driver_base()
@@ -676,6 +717,21 @@ driver_base::~driver_base()
 
 	if (s)
 		SDL_FreeSurface(s);
+
+	if (REUSE_VIDEO_BUFFER) {
+		// printf("~driver_base checking browser_pixels %p != %p \n", (void *)browser_pixels, (void *)NULL);
+		// assert(browser_pixels != NULL);
+		// printf("~driver_base freeing %p\n", (void *)browser_pixels);
+		// #ifdef EMSCRIPTEN
+		// EM_ASM_({
+	 //  	Module.debugPointer($0);
+		// }, browser_pixels);
+		// #endif
+		// free_browser_pixels(browser_pixels);
+		// browser_pixels = NULL;
+		// assert(browser_pixels == NULL);
+		// printf("~driver_base freed browser_pixels\n");
+	}
 
 	// the_buffer shall always be mapped through vm_acquire_framebuffer()
 	if (the_buffer != VM_MAP_FAILED) {
@@ -732,11 +788,21 @@ void driver_base::restore_mouse_accel(void)
 }
 
 
+static uint8 *browser_pixels = NULL;
+
+uint8 *alloc_browser_pixels(int32 size_to_copy) {
+	if (browser_pixels) {
+		return browser_pixels;
+	}
+	return (uint8 *)malloc(size_to_copy * sizeof(uint8));
+}
+
 /*
  *  Windowed display driver
  */
 
 static bool SDL_display_opened = false;
+
 
 // Open display
 driver_window::driver_window(SDL_monitor_desc &m)
@@ -768,6 +834,22 @@ driver_window::driver_window(SDL_monitor_desc &m)
 		return;
 #endif
 
+	if (REUSE_VIDEO_BUFFER) {
+		const int bytes_per_pixel = VIDEO_MODE_ROW_BYTES / VIDEO_MODE_X;
+		uint32 size_to_copy = VIDEO_MODE_X * bytes_per_pixel * VIDEO_MODE_Y;
+
+		// printf("driver_window checking browser_pixels %p != %p \n", (void *)browser_pixels, (void *)NULL);
+		// assert(browser_pixels == NULL);
+		browser_pixels = alloc_browser_pixels(size_to_copy);
+		// assert(browser_pixels);
+		// printf("driver_window allocated %p\n", (void *)browser_pixels);
+		#ifdef EMSCRIPTEN
+		EM_ASM_({
+	  	Module.debugPointer($0);
+		}, browser_pixels);
+		#endif
+	}
+
 	SDL_display_opened = true;
 
 #ifdef ENABLE_VOSF
@@ -797,10 +879,15 @@ driver_window::driver_window(SDL_monitor_desc &m)
 	}
 #endif
 	if (!use_vosf) {
+		printf("allocating the_buffer, the_buffer_copy\n");
 		// Allocate memory for frame buffer
 		the_buffer_size = (aligned_height + 2) * s->pitch;
 		the_buffer_copy = (uint8 *)calloc(1, the_buffer_size);
+		#ifdef BROWSER_VIDEO
+		the_buffer = (uint8 *)malloc(the_buffer_size);
+		#else
 		the_buffer = (uint8 *)vm_acquire_framebuffer(the_buffer_size);
+		#endif
 		D(bug("the_buffer = %p, the_buffer_copy = %p\n", the_buffer, the_buffer_copy));
 	}
 	
@@ -829,10 +916,15 @@ driver_window::driver_window(SDL_monitor_desc &m)
 	Screen_blitter_init(visualFormat, true, mac_depth_of_video_depth(VIDEO_MODE_DEPTH));
 
 	// Load gray ramp to 8->16/32 expand map
-	if (!IsDirectMode(mode))
-		for (int i=0; i<256; i++)
-			ExpandMap[i] = SDL_MapRGB(f, i, i, i);
-
+	if (!IsDirectMode(mode)) {
+		for (int i=0; i<256; i++) {
+			#ifdef EMSCRIPTEN
+					ExpandMap[i] = map_rgb(i, i, i, true);
+			#else
+					ExpandMap[i] = SDL_MapRGB(f, i, i, i);
+			#endif				
+		}
+	}
 	// Set frame buffer base
 	set_mac_frame_buffer(monitor, VIDEO_MODE_DEPTH, true);
 
@@ -843,12 +935,15 @@ driver_window::driver_window(SDL_monitor_desc &m)
 // Close display
 driver_window::~driver_window()
 {
+
 #ifdef ENABLE_VOSF
 	if (use_vosf)
 		the_host_buffer = NULL;	// don't free() in driver_base dtor
 #endif
+#ifndef EMSCRIPTEN
 	if (s)
 		SDL_FreeSurface(s);
+#endif
 }
 
 // Toggle mouse grab
@@ -1443,9 +1538,10 @@ void video_set_palette(void)
 }
 #endif
 
+
 void SDL_monitor_desc::set_palette(uint8 *pal, int num_in)
 {
-	printf("set_palette\n");
+	// printf("set_palette\n");
 	const VIDEO_MODE &mode = get_current_mode();
 
 	// FIXME: how can we handle the gamma ramp?
@@ -1470,7 +1566,11 @@ void SDL_monitor_desc::set_palette(uint8 *pal, int num_in)
 	if (!IsDirectMode(mode)) {
 		for (int i=0; i<256; i++) {
 			int c = i & (num_in-1); // If there are less than 256 colors, we repeat the first entries (this makes color expansion easier)
+			#ifdef EMSCRIPTEN
+			ExpandMap[i] = map_rgb(pal[c*3+0], pal[c*3+1], pal[c*3+2], true);
+			#else
 			ExpandMap[i] = SDL_MapRGB(drv->s->format, pal[c*3+0], pal[c*3+1], pal[c*3+2]);
+			#endif
 		}
 
 #ifdef ENABLE_VOSF
@@ -2064,6 +2164,7 @@ static int sdl_fake_kc_decode(int kc)
 }
 
 static void sdl_fake_read_input() {
+	#ifdef EMSCRIPTEN
 	int lock = EM_ASM_INT_V({
 			return Module.acquireInputLock();
 		});
@@ -2126,6 +2227,7 @@ static void sdl_fake_read_input() {
 			Module.releaseInputLock();
 		});
 	}
+	#endif
 }
 
 
@@ -2294,7 +2396,6 @@ static void update_display_static(driver_base *drv)
 	#endif
 }
 
-
 // Static display update (fixed frame rate, bounding boxes based)
 // XXX use NQD bounding boxes to help detect dirty areas?
 static void update_display_static_bbox(driver_base *drv)
@@ -2315,9 +2416,8 @@ static void update_display_static_bbox(driver_base *drv)
 	const int bytes_per_row = VIDEO_MODE_ROW_BYTES;
 	const int bytes_per_pixel = bytes_per_row / VIDEO_MODE_X;
 	const int dst_bytes_per_row = drv->s->pitch;
-
 	uint32 size_to_copy = VIDEO_MODE_X * bytes_per_pixel * VIDEO_MODE_Y;
-	uint8 *pixels = (uint8 *)alloca(sizeof(uint8) * size_to_copy);
+
 	// int x, y;
 	// for (y = 0; y < VIDEO_MODE_Y; y += VIDEO_MODE_Y) {
 	// 	int h = VIDEO_MODE_Y;
@@ -2338,13 +2438,22 @@ static void update_display_static_bbox(driver_base *drv)
 	// 		}
 	// 	}
 	// }
-	
-	Screen_blit((uint8 *)pixels, the_buffer, size_to_copy);
-	EM_ASM_({
-  	// Module.print('blit: ' + $0 + ' ' + $1 + ' ' + $2);
 
-  	Module.blit($0, $1, $2, $3, $4);
-	}, pixels, VIDEO_MODE_X, VIDEO_MODE_Y, 32, !IsDirectMode(mode));
+	if (REUSE_VIDEO_BUFFER) {
+		// uint8 *browser_pixels = drv->browser_pixels;
+
+		assert(browser_pixels);
+		Screen_blit((uint8 *)browser_pixels, the_buffer, size_to_copy);
+		EM_ASM_({
+	  	Module.blit($0, $1, $2, $3, $4);
+		}, browser_pixels, VIDEO_MODE_X, VIDEO_MODE_Y, 32, !IsDirectMode(mode));
+	} else {
+		uint8 *pixels = (uint8 *)alloca(sizeof(uint8) * size_to_copy);
+		Screen_blit((uint8 *)pixels, the_buffer, size_to_copy);
+		EM_ASM_({
+	  	Module.blit($0, $1, $2, $3, $4);
+		}, pixels, VIDEO_MODE_X, VIDEO_MODE_Y, 32, !IsDirectMode(mode));
+	}
 #else
 	// Lock surface, if required
 	if (SDL_MUSTLOCK(drv->s))
@@ -2383,6 +2492,15 @@ static void update_display_static_bbox(driver_base *drv)
 				nr_boxes++;
 			}
 		}
+	}
+
+	// testing bad allocations
+	if (REUSE_VIDEO_BUFFER) {
+		uint32 size_to_copy = VIDEO_MODE_X * bytes_per_pixel * VIDEO_MODE_Y;
+		// uint8 *browser_pixels = drv->browser_pixels;
+
+		assert(browser_pixels);
+		Screen_blit((uint8 *)browser_pixels, the_buffer, size_to_copy);
 	}
 
 	// Unlock surface, if required

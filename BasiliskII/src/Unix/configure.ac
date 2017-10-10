@@ -636,6 +636,9 @@ CAN_NATIVE_M68K=no
 if [[ -z "${macemujs_conf_native_os// }" ]]; then
   echo "skipping network"
 
+  # echo "adding browser io"
+  # EXTRASYSSRCS="$EXTRASYSSRCS ../browser/browser_io.cpp"
+
   echo "using audio_oss_esd"
   AUDIOSRC=audio_oss_esd.cpp
 else
@@ -829,7 +832,12 @@ if [[ "x$HAVE_PTHREADS" = "xno" ]]; then
   AC_MSG_WARN([You don't have pthreads, disabling serial, ethernet and audio support.])
   SERIALSRC=../dummy/serial_dummy.cpp
   ETHERSRC=../dummy/ether_dummy.cpp
+
+  if [[ -z "${macemujs_conf_native_os// }" ]]; then
+  echo "(actually experimental single thread browser audio is still enabled)"
+  else
   AUDIOSRC=../dummy/audio_dummy.cpp
+  fi
 fi
 
 dnl HACK TO REMOVE DEPS
@@ -923,6 +931,12 @@ if [[ "x$have_mach_vm" = "xyes" ]]; then
 fi
 AC_TRANSLATE_DEFINE(HAVE_MACH_VM, "$have_mach_vm",
   [Define if your system has a working vm_allocate()-based memory allocator.])
+
+dnl Force no support for mach_vm
+have_mach_vm=no
+AC_TRANSLATE_DEFINE(HAVE_MACH_VM, "$have_mach_vm",
+  [Define if your system has a working vm_allocate()-based memory allocator.])
+
 
 fi dnl HAVE_MACH_VM
 

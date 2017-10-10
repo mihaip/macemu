@@ -14,3 +14,6 @@ emcc \
   # --preload-file DCImage.img \
   # --preload-file Quadra-650.rom \
   # --preload-file prefs \
+
+# instrument malloc and free
+# sed -i '' -E 's/function _free\(\$0\) {$/var _prevmalloc = _malloc;_malloc = function _wrapmalloc($0){$0 = $0|0;var $1=_prevmalloc($0);memAllocAdd($1);return ($1|0);};function _free(\$0) {memAllocRemove(\$0);/' ./BasiliskII.js

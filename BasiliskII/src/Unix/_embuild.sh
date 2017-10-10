@@ -20,6 +20,7 @@ else
 fi
 
 # env CFLAGS=$CFLAGS CPPFLAGS=$CPPFLAGS LDFLAGS=$LDFLAGS
+# CFLAGS="-g -fsanitize=address" CPPFLAGS="-g -fsanitize=address" LDFLAGS="-g -fsanitize=address" \
 ./autogen.sh \
   --without-esd \
   --without-gtk \
@@ -37,10 +38,15 @@ if [[ -z "$macemujs_conf_native" ]]; then
 else
   {
     echo "#define USE_CPU_EMUL_SERVICES 1"
+    # echo "#undef __MACH__"
+    # echo "#undef __APPLE__"
     echo "#undef AQUA"
     echo "#undef HAVE_FRAMEWORK_COREFOUNDATION"
     echo "#undef HAVE_MACH_EXCEPTIONS"
     echo "#undef HAVE_LIBPOSIX4"
     echo "#undef HAVE_LIBRT"
+    # echo "#undef HAVE_MACH_VM"
+    # echo "#undef HAVE_MMAP_VM"
+    # echo "#undef EMSCRIPTEN"
   } >> ./config.h
 fi

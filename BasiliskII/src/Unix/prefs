@@ -1,7 +1,7 @@
 disk MacOS753
 disk DCImage.img
 extfs /
-screen win/640/480
+screen win/800/600
 seriala 
 serialb 
 udptunnel false

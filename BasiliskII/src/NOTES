@@ -1,3 +1,8 @@
+commands run in Unix dir
+
+```
+cd src/Unix
+```
 
 # make for native without pthreads
 
@@ -8,10 +13,6 @@ make
 ./BasiliskII
 ```
 
-- ?? uses VOSF for screen update
-- ?? requires mach exceptions for VOSF
-- requires mach exceptions for handling bad accesses
-
 
 # make for native with pthreads
 
@@ -21,9 +22,19 @@ make clean
 make
 ./BasiliskII
 ```
-- uses timer thread for screen update
-- requires mach exceptions for handling bad accesses (maybe not needed?)
 
+
+# make for browser without pthreads
+
+```
+# (once, otherwise configure will say c compiler is broken)
+source ~/code/tools/emsdk_portable/emsdk_env.sh
+
+./_embuild.sh 
+make clean
+make
+./_emafterbuild.sh 
+```
 
 
 # make for browser with pthreads
@@ -35,4 +46,6 @@ source ~/code/tools/emsdk_portable/emsdk_env.sh
 macemujs_conf_pthreads=1 ./_embuild.sh 
 make clean
 make
+macemujs_conf_pthreads=1 ./_emafterbuild.sh 
 ``
+
