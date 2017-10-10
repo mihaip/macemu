@@ -1,6 +1,14 @@
 # Object files
 obj/*
 BasiliskII
+BasiliskII.bc
+BasiliskII.dSYM 
+BasiliskII.data 
+BasiliskII.html 
+BasiliskII.js 
+BasiliskII.js.map
+BasiliskII.js.mem
+BasiliskIIDebug
 
 # Autotools generated files
 Makefile
