@@ -83,6 +83,17 @@ var gainNode = audioContext.createGain();
 gainNode.gain.value = 1;
 gainNode.connect(audioContext.destination);
 
+var warningLastTime = {};
+var warningCount = {};
+function throttledWarning(type, message) {
+  warningCount[type] = (warningCount[type] || 0) + 1;
+  if (Date.now() - (warningLastTime[type] || 0) > 5000) {
+    console.warn(message, `${warningCount[type] || 0} times`);
+    warningLastTime[type] = Date.now();
+    warningCount[type] = 0;
+  }
+}
+
 function openAudio() {
   audio.pushAudio = function pushAudio(
     blockBuffer, // u8 typed array
@@ -123,38 +134,27 @@ function openAudio() {
     audio.nextPlayTime = playtime + audio.bufferDurationSecs;
   }
 
-  var getBlockBufferLastWarningTime = 0;
-  var getBlockBufferWarningCount = 0;
   audio.getBlockBuffer = function getBlockBuffer() {
     // audio chunk layout
     // 0: lock state
     // 1: pointer to next chunk
-    // 2->buffersize+2: audio buffer
+    // 2 to (2+buffersize): audio buffer
     var curChunkIndex = audio.nextChunkIndex;
     var curChunkAddr = curChunkIndex * audioBlockChunkSize;
 
     if (audioDataBufferView[curChunkAddr] !== LockStates.UI_THREAD_LOCK) {
-      getBlockBufferWarningCount++;
-      if (audio.gotFirstBlock && Date.now() - getBlockBufferLastWarningTime > 5000) {
-
-        console.warn(`UI thread tried to read audio data from worker-locked chunk ${getBlockBufferWarningCount} times`);
-        console.log('curChunkIndex',curChunkIndex)
-        // debugger
-        getBlockBufferLastWarningTime = Date.now();
-        getBlockBufferWarningCount = 0;
+      if (audio.gotFirstBlock) {
+        throttledWarning('UI thread tried to read audio data from worker-locked chunk');
       }
       return null;
     }
     audio.gotFirstBlock = true;
 
-    // debugger
 
     var blockBuffer = audioDataBufferView.slice(curChunkAddr+2, curChunkAddr+2+audio.bufferSize);
     audio.nextChunkIndex = audioDataBufferView[curChunkAddr+1];
     // console.assert(audio.nextChunkIndex != curChunkIndex, `curChunkIndex=${curChunkIndex} == nextChunkIndex=${audio.nextChunkIndex}`)
     audioDataBufferView[curChunkAddr] = LockStates.EMUL_THREAD_LOCK;
-    // debugger
-    // console.log(`got buffer=${curChunkIndex}, next=${audio.nextChunkIndex}`)
     return blockBuffer;
   }
 
