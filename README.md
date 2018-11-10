@@ -14,3 +14,20 @@ Mouse and keyboard input are communicated via another SharedArrayBuffer [here](h
 The implementation of audio uses a queue of buffers in shared memory, which each have a flag signifying whether they are full and ready to be consumed by the UI thread, or empty and ready to be written by the emulator thread. The emulator thread will ensure that there are several buffers of audio queued up, to avoid gaps in playback in the case of a slowdown. When the emulator is built natively, audio has a dedicated thread to avoid slowness on the emulator thread affecting playback, but to make things simpler I've just hacked in a call to output audio directly into the emulator's main loop [here](https://github.com/jsdf/macemu/blob/80557e8ff1f411f0fe850669502c2ba5fe056b96/BasiliskII/src/Unix/main_unix.cpp#L1261-L1265). This could be improved by using Emscripten's pthreads support to spawn a separate audio thread. The audio buffer is passed to JS [here](https://github.com/jsdf/macemu/blob/80557e8ff1f411f0fe850669502c2ba5fe056b96/BasiliskII/src/Unix/audio_oss_esd.cpp#L615-L618) and copied into a SharedArrayBuffer [here](https://github.com/jsdf/macemu/blob/bas-emscripten-release/BasiliskII/src/Unix/BasiliskII-worker-boot.js#L238-L266). The audio read in the UI thread [here](https://github.com/jsdf/macemu/blob/bas-emscripten-release/BasiliskII/src/Unix/BasiliskII-worker-ui-thread.js#L137-L159) and output using the Web Audio API.
 
 In future this implementation could be improved by moving all of the shared memory communication to C code by leveraging Emscripten's pthreads support. In this scenario the emulator code would start up, spawn a thread to run the emulator main loop, and then yield back to the browser. Instead of creating SharedArrayBuffers to communicate video, audio, and input, Emscripten's pthreads mode makes the entire C heap memory space a SharedArrayBuffer, with each spawned thread running in a web worker. The JS would simply read and write values on the C heap. This would also unblock using threads in the emulator code (currently not easy due to Chrome's lack of support for web workers spawning other web workers). 
+
+## build instructions
+
+See the NOTES file for more options. Basic build:
+
+```sh
+source /path/to/emsdk/emsdk_set_env.sh
+
+cd ./BasiliskII/src/Unix/
+
+./_embuild.sh 
+make clean
+make
+./_emafterbuild.sh 
+http-server .
+open http://localhost:8080/BasiliskII-worker.html
+```

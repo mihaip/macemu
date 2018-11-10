@@ -1,6 +1,11 @@
 emflgs=""
 emflgs+=" -s TOTAL_MEMORY=536870912"
+emflgs+=" -s FORCE_FILESYSTEM=1"
 emflgs+=" -s ASM_JS=1"
+emflgs+=" -s WASM=0"
+emflgs+=" -s BINARYEN_METHOD='asmjs'"
+
+# emflgs+=" --js-library ./src/Unix/js/library_workerthread.js"
 
 emenv_debug=""
 if [ -z $emenv_debug ]; then
