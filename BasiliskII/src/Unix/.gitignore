@@ -25,3 +25,9 @@ cpudefs.cpp
 cpuemu.cpp
 cpustbl.cpp
 cputbl.h
+
+a.out
+a.out.js
+BasiliskII.wasm
+BasiliskII.wasm.map
+BasiliskII.wast
