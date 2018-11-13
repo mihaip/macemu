@@ -26,8 +26,12 @@ cpuemu.cpp
 cpustbl.cpp
 cputbl.h
 
+# build
 a.out
 a.out.js
 BasiliskII.wasm
 BasiliskII.wasm.map
 BasiliskII.wast
+BasiliskII.wasm.pre
+
+# files which change when testing native

@@ -1,19 +1,28 @@
+use_wasm=""
 emflgs=""
 emflgs+=" -s TOTAL_MEMORY=536870912"
 emflgs+=" -s FORCE_FILESYSTEM=1"
+if [ -z $use_wasm ]; then
 emflgs+=" -s ASM_JS=1"
 emflgs+=" -s WASM=0"
 emflgs+=" -s BINARYEN_METHOD='asmjs'"
+else
+emflgs+=" -s WASM=1"
+emflgs+=" -s BINARYEN_METHOD='native-wasm'"
+fi
 
 # emflgs+=" --js-library ./src/Unix/js/library_workerthread.js"
 
-emenv_debug=""
+emenv_debug="y"
 if [ -z $emenv_debug ]; then
 emflgs+=" -O3 -g4"
 else
 emflgs+=" -O0 -g4"
-# emflgs+=" -s SAFE_HEAP=1 -s"
-emflgs+=" -s ASSERTIONS=2"
+
+# emflgs+=" -s UNALIGNED_MEMORY=1 " # not supported in fastcomp
+# emflgs+=" -s SAFE_HEAP=1 "
+# emflgs+=" -s SAFE_HEAP_LOG=1 "
+emflgs+=" -s ASSERTIONS=2 " 
 emflgs+=" -s DEMANGLE_SUPPORT=1"
 fi
 

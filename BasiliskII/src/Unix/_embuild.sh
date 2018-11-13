@@ -15,6 +15,7 @@ if [[ -z "$macemujs_conf_native" ]]; then
   export CXX="$EMSCRIPTEN/em++"
   export AR="$EMSCRIPTEN/emar"
   export EMSCRIPTEN=1
+  echo "with flags '$EMFLAGS'"
 else
   echo "building for native"
 fi
