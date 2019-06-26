@@ -1,4 +1,4 @@
-
+var INSTRUMENT_MALLOC = false;
 var memAllocSet = new Set();
 var memAllocSetPersistent = new Set();
 function memAllocAdd(addr) {
@@ -11,12 +11,15 @@ function memAllocAdd(addr) {
 }
 function memAllocRemove(addr) {
   if (!memAllocSet.has(addr)) {
-    console.error(`unalloc'd memory free'd at ${addr} (everallocd=${memAllocSetPersistent.has(addr)})`);
+    console.error(
+      `unalloc'd memory free'd at ${addr} (everallocd=${memAllocSetPersistent.has(
+        addr
+      )})`
+    );
   }
   console.warn('free', addr);
   memAllocSet.delete(addr);
 }
-
 
 var pathGetFilenameRegex = /\/([^\/]+)$/;
 
@@ -32,7 +35,13 @@ function pathGetFilename(path) {
 function addAutoloader(module) {
   var loadDatafiles = function() {
     module.autoloadFiles.forEach(function(filepath) {
-      module.FS_createPreloadedFile('/', pathGetFilename(filepath), filepath, true, true);
+      module.FS_createPreloadedFile(
+        '/',
+        pathGetFilename(filepath),
+        filepath,
+        true,
+        true
+      );
     });
   };
 
@@ -68,6 +77,16 @@ var InputBufferAddresses = {
   keyStateAddr: 7,
 };
 
+const InputBufferAddressTypes = Object.entries(InputBufferAddresses).reduce(
+  (acc, [k, v]) => {
+    acc[v] = k;
+    return acc;
+  },
+  {}
+);
+
+const inputBufferLastVals = {};
+
 var LockStates = {
   READY_FOR_UI_THREAD: 0,
   UI_THREAD_LOCK: 1,
@@ -75,12 +94,12 @@ var LockStates = {
   EMUL_THREAD_LOCK: 3,
 };
 
-var Module = null
+var Module = null;
 
 self.onmessage = function(msg) {
   console.log('init worker');
   startEmulator(Object.assign({}, msg.data, {singleThreadedEmscripten: true}));
-}
+};
 
 function startEmulator(parentConfig) {
   var screenBufferView = new Uint8Array(
@@ -121,18 +140,17 @@ function startEmulator(parentConfig) {
     // if (!tryToAcquireCyclicalLock(bufferView, lockIndex)) {
     //   throw new Error('failed to acquire lock for index', lockIndex);
     // }
-    // 
-    // 
-    if (
-      Atomics.load(bufferView, lockIndex) === LockStates.UI_THREAD_LOCK
-    ) {
-      while ( 
-       Atomics.compareExchange(
-        bufferView,
-        lockIndex,
-        LockStates.UI_THREAD_LOCK,
-        LockStates.EMUL_THREAD_LOCK
-      ) !== LockStates.UI_THREAD_LOCK) {
+    //
+    //
+    if (Atomics.load(bufferView, lockIndex) === LockStates.UI_THREAD_LOCK) {
+      while (
+        Atomics.compareExchange(
+          bufferView,
+          lockIndex,
+          LockStates.UI_THREAD_LOCK,
+          LockStates.EMUL_THREAD_LOCK
+        ) !== LockStates.UI_THREAD_LOCK
+      ) {
         // spin
         // TODO use wait and wake
       }
@@ -142,13 +160,8 @@ function startEmulator(parentConfig) {
   }
 
   function releaseTwoStateLock(bufferView, lockIndex) {
-    Atomics.store(
-      bufferView,
-      lockIndex,
-      LockStates.UI_THREAD_LOCK
-    ); // unlock
+    Atomics.store(bufferView, lockIndex, LockStates.UI_THREAD_LOCK); // unlock
   }
-
 
   function tryToAcquireCyclicalLock(bufferView, lockIndex) {
     var res = Atomics.compareExchange(
@@ -164,11 +177,7 @@ function startEmulator(parentConfig) {
   }
 
   function releaseCyclicalLock(bufferView, lockIndex) {
-    Atomics.store(
-      bufferView,
-      lockIndex,
-      LockStates.READY_FOR_UI_THREAD
-    ); // unlock
+    Atomics.store(bufferView, lockIndex, LockStates.READY_FOR_UI_THREAD); // unlock
   }
 
   function acquireInputLock() {
@@ -188,10 +197,7 @@ function startEmulator(parentConfig) {
     inputBufferView[InputBufferAddresses.keyCodeAddr] = 0;
     inputBufferView[InputBufferAddresses.keyStateAddr] = 0;
 
-    releaseCyclicalLock(
-      inputBufferView,
-      InputBufferAddresses.globalLockAddr,
-    );
+    releaseCyclicalLock(inputBufferView, InputBufferAddresses.globalLockAddr);
   }
 
   var AudioConfig = null;
@@ -199,33 +205,97 @@ function startEmulator(parentConfig) {
   var AudioBufferQueue = [];
 
   Module = {
-    autoloadFiles: [
-      'MacOS753',
-      'DCImage.img',
-      'Quadra-650.rom',
-      'prefs',
-    ],
+    autoloadFiles: ['MacOS753', 'DCImage.img', 'Quadra-650.rom', 'prefs'],
 
-    "arguments": ["--config", "prefs"],
+    arguments: ['--config', 'prefs'],
     canvas: null,
+
+    onRuntimeInitialized: function() {
+      if (INSTRUMENT_MALLOC) {
+        // instrument malloc and free
+        const oldMalloc = Module._malloc;
+        const oldFree = Module._free;
+        console.error('instrumenting malloc and free');
+
+        Module._malloc = function _wrapmalloc($0) {
+          $0 = $0 | 0;
+          var $1 = oldMalloc($0);
+          memAllocAdd($1);
+          return $1 | 0;
+        };
+        Module._free = function _wrapfree($0) {
+          memAllocRemove($0);
+          var $1 = oldFree($0);
+          return $1 | 0;
+        };
+      }
+
+      self.Module = Module;
+    },
+
+    summarizeBuffer: function(bufPtr, width, height, depth) {
+      return;
+      var length = width * height * (depth === 32 ? 4 : 1); // 32bpp or 8bpp
+
+      let zeroChannelCount = 0;
+      let nonZeroChannelCount = 0;
+      let zeroAlphaCount = 0;
+      let nonZeroAlphaCount = 0;
+
+      for (var i = 0; i < length; i++) {
+        if (depth === 32) {
+          if (i % 4 < 3) {
+            if (Module.HEAPU8[bufPtr + i] > 0) {
+              nonZeroChannelCount++;
+            } else {
+              zeroChannelCount++;
+            }
+          } else {
+            if (Module.HEAPU8[bufPtr + i] > 0) {
+              nonZeroAlphaCount++;
+            } else {
+              zeroAlphaCount++;
+            }
+          }
+        }
+      }
+      if (nonZeroAlphaCount > zeroAlphaCount) debugger;
+      console.log(
+        'buffer at',
+        bufPtr,
+        {
+          zeroChannelCount,
+          nonZeroChannelCount,
+          pixelColorChannels: width * height * (depth === 32 ? 3 : 1),
+          zeroAlphaCount,
+          nonZeroAlphaCount,
+        },
+        Module.HEAPU8.slice(bufPtr, bufPtr + 128)
+      );
+    },
 
     blit: function blit(bufPtr, width, height, depth, usingPalette) {
       // console.time('await worker video lock');
       // waitForTwoStateLock(videoModeBufferView, 9);
       // console.timeEnd('await worker video lock');
-      
+
       videoModeBufferView[0] = width;
       videoModeBufferView[1] = height;
       videoModeBufferView[2] = depth;
       videoModeBufferView[3] = usingPalette;
-      var length = (width * height) * (depth === 32 ? 4 : 1); // 32bpp or 8bpp
+      var length = width * height * (depth === 32 ? 4 : 1); // 32bpp or 8bpp
       for (var i = 0; i < length; i++) {
         screenBufferView[i] = Module.HEAPU8[bufPtr + i];
       }
       // releaseTwoStateLock(videoModeBufferView, 9);
     },
 
-    openAudio: function openAudio(sampleRate, sampleSize, channels, framesPerBuffer) {
+    openAudio: function openAudio(
+      sampleRate,
+      sampleSize,
+      channels,
+      framesPerBuffer
+    ) {
       AudioConfig = {
         sampleRate: sampleRate,
         sampleSize: sampleSize,
@@ -236,35 +306,37 @@ function startEmulator(parentConfig) {
     },
 
     enqueueAudio: function enqueueAudio(bufPtr, nbytes, type) {
-      var newAudio = Module.HEAPU8.slice(bufPtr, bufPtr+nbytes);
+      var newAudio = Module.HEAPU8.slice(bufPtr, bufPtr + nbytes);
       // console.assert(
       //   nbytes == parentConfig.audioBlockBufferSize,
       //   `emulator wrote ${nbytes}, expected ${parentConfig.audioBlockBufferSize}`
       // );
-      
-      var writingChunkIndex = nextAudioChunkIndex;
-      var writingChunkAddr = writingChunkIndex*parentConfig.audioBlockChunkSize;
 
+      var writingChunkIndex = nextAudioChunkIndex;
+      var writingChunkAddr =
+        writingChunkIndex * parentConfig.audioBlockChunkSize;
 
       if (audioDataBufferView[writingChunkAddr] === LockStates.UI_THREAD_LOCK) {
-        console.warn('worker tried to write audio data to UI-thread-locked chunk',writingChunkIndex);
+        // console.warn('worker tried to write audio data to UI-thread-locked chunk',writingChunkIndex);
         return 0;
       }
 
       var nextNextChunkIndex = writingChunkIndex + 1;
-      if (nextNextChunkIndex * parentConfig.audioBlockChunkSize > audioDataBufferView.length-1) {
+      if (
+        nextNextChunkIndex * parentConfig.audioBlockChunkSize >
+        audioDataBufferView.length - 1
+      ) {
         nextNextChunkIndex = 0;
       }
       // console.assert(nextNextChunkIndex != writingChunkIndex, `writingChunkIndex=${nextNextChunkIndex} == nextChunkIndex=${nextNextChunkIndex}`)
 
-      audioDataBufferView[writingChunkAddr+1] = nextNextChunkIndex;
-      audioDataBufferView.set(newAudio, writingChunkAddr+2);
+      audioDataBufferView[writingChunkAddr + 1] = nextNextChunkIndex;
+      audioDataBufferView.set(newAudio, writingChunkAddr + 2);
       audioDataBufferView[writingChunkAddr] = LockStates.UI_THREAD_LOCK;
 
       nextAudioChunkIndex = nextNextChunkIndex;
       return nbytes;
     },
-
 
     debugPointer: function debugPointer(ptr) {
       console.log('debugPointer', ptr);
@@ -275,16 +347,15 @@ function startEmulator(parentConfig) {
     InputBufferAddresses: InputBufferAddresses,
 
     getInputValue: function getInputValue(addr) {
-      return inputBufferView[addr]
+      return inputBufferView[addr];
     },
 
     print: console.log.bind(console),
-    
+
     printErr: console.warn.bind(console),
 
     releaseInputLock: releaseInputLock,
   };
-
 
   // inject extra behaviours
   addAutoloader(Module);

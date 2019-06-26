@@ -514,6 +514,7 @@ static void add_mode(int type, int width, int height, int resolution_id, int byt
 static void set_mac_frame_buffer(SDL_monitor_desc &monitor, int depth, bool native_byte_order)
 {
 #if !REAL_ADDRESSING && !DIRECT_ADDRESSING
+
 	int layout = FLAYOUT_DIRECT;
 	if (depth == VIDEO_DEPTH_16BIT)
 		layout = (screen_depth == 15) ? FLAYOUT_HOST_555 : FLAYOUT_HOST_565;
@@ -524,6 +525,7 @@ static void set_mac_frame_buffer(SDL_monitor_desc &monitor, int depth, bool nati
 	else
 		MacFrameLayout = FLAYOUT_DIRECT;
 	monitor.set_mac_frame_base(MacFrameBaseMac);
+		printf("monitor.set_mac_frame_base(MacFrameBaseMac) native_byte_order=%d MacFrameLayout=%d\n",native_byte_order,MacFrameLayout);
 
 	// Set variables used by UAE memory banking
 	const VIDEO_MODE &mode = monitor.get_current_mode();
@@ -531,6 +533,7 @@ static void set_mac_frame_buffer(SDL_monitor_desc &monitor, int depth, bool nati
 	MacFrameSize = VIDEO_MODE_ROW_BYTES * VIDEO_MODE_Y;
 	InitFrameBufferMapping();
 #else
+	printf("monitor.set_mac_frame_base(Host2MacAddr(the_buffer))\n");
 	monitor.set_mac_frame_base(Host2MacAddr(the_buffer));
 #endif
 	D(bug("monitor.mac_frame_base = %08x\n", monitor.get_mac_frame_base()));
@@ -794,6 +797,7 @@ uint8 *alloc_browser_pixels(int32 size_to_copy) {
 	if (browser_pixels) {
 		return browser_pixels;
 	}
+	printf("actually allocating browser pixels\n");
 	return (uint8 *)malloc(size_to_copy * sizeof(uint8));
 }
 
@@ -841,8 +845,8 @@ driver_window::driver_window(SDL_monitor_desc &m)
 		// printf("driver_window checking browser_pixels %p != %p \n", (void *)browser_pixels, (void *)NULL);
 		// assert(browser_pixels == NULL);
 		browser_pixels = alloc_browser_pixels(size_to_copy);
-		// assert(browser_pixels);
-		// printf("driver_window allocated %p\n", (void *)browser_pixels);
+		assert(browser_pixels);
+		printf("driver_window allocated browser_pixels=%p\n", (void *)browser_pixels);
 		#ifdef EMSCRIPTEN
 		EM_ASM_({
 	  	Module.debugPointer($0);
@@ -2404,13 +2408,6 @@ static void update_display_static_bbox(driver_base *drv)
 	assert(Screen_blit);
 	const VIDEO_MODE &mode = drv->mode;
 
-	// Allocate bounding boxes for SDL_UpdateRects()
-	const int N_PIXELS = 64;
-	const int n_x_boxes = (VIDEO_MODE_X + N_PIXELS - 1) / N_PIXELS;
-	const int n_y_boxes = (VIDEO_MODE_Y + N_PIXELS - 1) / N_PIXELS;
-	SDL_Rect *boxes = (SDL_Rect *)alloca(sizeof(SDL_Rect) * n_x_boxes * n_y_boxes);
-	int nr_boxes = 0;
-
 #ifdef EMSCRIPTEN
 	// Update the surface from Mac screen
 	const int bytes_per_row = VIDEO_MODE_ROW_BYTES;
@@ -2442,6 +2439,11 @@ static void update_display_static_bbox(driver_base *drv)
 	if (REUSE_VIDEO_BUFFER) {
 		// uint8 *browser_pixels = drv->browser_pixels;
 
+	// printf("Screen_blit from the_buffer=%p to browser_pixels=%p of size=%u depth=%d\n",(void *)the_buffer, (void *)browser_pixels, size_to_copy, VIDEO_MODE_DEPTH);
+
+		EM_ASM_({
+	  	Module.summarizeBuffer($0, $1, $2, $3);
+		}, the_buffer, VIDEO_MODE_X, VIDEO_MODE_Y, 32);
 		assert(browser_pixels);
 		Screen_blit((uint8 *)browser_pixels, the_buffer, size_to_copy);
 		EM_ASM_({
@@ -2455,6 +2457,13 @@ static void update_display_static_bbox(driver_base *drv)
 		}, pixels, VIDEO_MODE_X, VIDEO_MODE_Y, 32, !IsDirectMode(mode));
 	}
 #else
+	// Allocate bounding boxes for SDL_UpdateRects()
+	const int N_PIXELS = 64;
+	const int n_x_boxes = (VIDEO_MODE_X + N_PIXELS - 1) / N_PIXELS;
+	const int n_y_boxes = (VIDEO_MODE_Y + N_PIXELS - 1) / N_PIXELS;
+	SDL_Rect *boxes = (SDL_Rect *)alloca(sizeof(SDL_Rect) * n_x_boxes * n_y_boxes);
+	int nr_boxes = 0;
+
 	// Lock surface, if required
 	if (SDL_MUSTLOCK(drv->s))
 		SDL_LockSurface(drv->s);
