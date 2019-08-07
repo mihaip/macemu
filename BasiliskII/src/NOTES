@@ -20,7 +20,7 @@ make
 source ~/code/tools/emsdk_portable/emsdk_env.sh
 
 ./_embuild.sh 
-make clean
+make clean # actually maybe just mostlyclean?? i think we need the generated CPU files
 make
 ./_emafterbuild.sh 
 ```

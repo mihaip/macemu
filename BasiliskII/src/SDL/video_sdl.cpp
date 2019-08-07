@@ -1740,8 +1740,10 @@ static bool is_modifier_key(SDL_KeyboardEvent const & e)
 	case SDLK_LALT:
 	case SDLK_RMETA:
 	case SDLK_LMETA:
+	#ifndef EMSCRIPTEN
 	case SDLK_LSUPER:
 	case SDLK_RSUPER:
+	#endif
 	case SDLK_MODE:
 	case SDLK_COMPOSE:
 		return true;
@@ -1840,8 +1842,10 @@ static int kc_decode(SDL_keysym const & ks, bool key_down)
 	case SDLK_LMETA: return 0x3a;
 	case SDLK_RMETA: return 0x3a;
 #endif
+	#ifndef EMSCRIPTEN
 	case SDLK_LSUPER: return 0x3a; // "Windows" key
 	case SDLK_RSUPER: return 0x3a;
+	#endif
 	case SDLK_MENU: return 0x32;
 	case SDLK_CAPSLOCK: return 0x39;
 	case SDLK_NUMLOCK: return 0x47;
