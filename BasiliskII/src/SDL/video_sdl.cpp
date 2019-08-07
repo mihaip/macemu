@@ -71,6 +71,7 @@
 
 #ifdef EMSCRIPTEN
 #include <emscripten.h>
+#define EMSCRIPTEN_SAB_WORKER 0
 #endif
 // Supported video modes
 using std::vector;
@@ -774,7 +775,7 @@ void driver_base::update_palette(void)
 {
 	const VIDEO_MODE &mode = monitor.get_current_mode();
 
-	#ifndef EMSCRIPTEN
+	#ifndef EMSCRIPTEN_SAB_WORKER
 	if ((int)VIDEO_MODE_DEPTH <= VIDEO_DEPTH_8BIT)
 		SDL_SetPalette(s, SDL_PHYSPAL, sdl_palette, 0, 256);
 	#endif
@@ -847,7 +848,7 @@ driver_window::driver_window(SDL_monitor_desc &m)
 		browser_pixels = alloc_browser_pixels(size_to_copy);
 		assert(browser_pixels);
 		printf("driver_window allocated browser_pixels=%p\n", (void *)browser_pixels);
-		#ifdef EMSCRIPTEN
+		#ifdef EMSCRIPTEN_SAB_WORKER
 		EM_ASM_({
 	  	Module.debugPointer($0);
 		}, browser_pixels);
@@ -923,6 +924,7 @@ driver_window::driver_window(SDL_monitor_desc &m)
 	if (!IsDirectMode(mode)) {
 		for (int i=0; i<256; i++) {
 			#ifdef EMSCRIPTEN
+					// SDL_MapRGB is not implemented in emscripten
 					ExpandMap[i] = map_rgb(i, i, i, true);
 			#else
 					ExpandMap[i] = SDL_MapRGB(f, i, i, i);
@@ -1901,6 +1903,9 @@ static int event2keycode(SDL_KeyboardEvent const &ev, bool key_down)
 
 static void handle_events(void)
 {
+
+	#ifndef EMSCRIPTEN
+	// currently broken for emscripten SDL due to SDL_PeepEvents signature
 	SDL_Event events[SDL_N_EVENTS_PER_HANDLER];
 	const int n_max_events = sizeof(events) / sizeof(events[0]);
 	int n_events;
@@ -2032,6 +2037,7 @@ static void handle_events(void)
 			}
 		}
 	}
+	#endif
 }
 
 
@@ -2408,7 +2414,7 @@ static void update_display_static_bbox(driver_base *drv)
 	assert(Screen_blit);
 	const VIDEO_MODE &mode = drv->mode;
 
-#ifdef EMSCRIPTEN
+#ifdef EMSCRIPTEN_SAB_WORKER
 	// Update the surface from Mac screen
 	const int bytes_per_row = VIDEO_MODE_ROW_BYTES;
 	const int bytes_per_pixel = bytes_per_row / VIDEO_MODE_X;
@@ -2657,7 +2663,11 @@ static void VideoRefreshInit(void)
 static inline void do_video_refresh(void)
 {
 	#ifdef EMSCRIPTEN
-	sdl_fake_read_input();
+		#ifdef EMSCRIPTEN_SAB_WORKER
+		sdl_fake_read_input();
+		#else 
+		// TODO implement event handling with emscripten SDL
+		#endif
 	#else
 	// Handle SDL events
 	handle_events();
