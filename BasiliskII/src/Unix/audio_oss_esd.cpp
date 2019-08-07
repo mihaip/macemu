@@ -467,7 +467,7 @@ void audio_write_blocks(int blocks_to_write)
 		blocks_to_skip--;
 	}
 	if (blocks_to_write == 0) {
-		printf("audio_write_blocks early return\n");
+		// printf("audio_write_blocks early return\n");
 		return;
 	}
 	
@@ -545,7 +545,7 @@ silence:
 
 	if (failed_to_write) {
 		blocks_to_skip = 3;
-		printf("blocks_to_skip=%d\n", blocks_to_skip);
+		// printf("blocks_to_skip=%d\n", blocks_to_skip);
 	}
 }
 

@@ -27,13 +27,24 @@ make
 # make for browser without pthreads
 
 ```
+# build for native once first, we need the generated cpu emulator code
+
 # (once, otherwise configure will say c compiler is broken)
 source ~/code/tools/emsdk_portable/emsdk_env.sh
 
+# building for SharedArrayBuffer worker mode
 ./_embuild.sh 
-make clean
-make
-./_emafterbuild.sh 
+# or for main thread mode
+macemujs_conf_mainthread=1 ./_embuild.sh 
+
+# then to compile and convert to js
+make && ./_emafterbuild.sh 
+```
+
+to clean without deleting generated cpu emulator code (which can only be build in native mode):
+
+```
+make mostlyclean
 ```
 
 

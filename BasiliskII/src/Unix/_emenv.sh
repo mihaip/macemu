@@ -11,14 +11,24 @@ emflgs+=" -s WASM=1"
 emflgs+=" -s BINARYEN_METHOD='native-wasm'"
 fi
 
+use_emterpreter=""
+if [ -n "$use_emterpreter" ]; then
+emflgs+=" -s EMTERPRETIFY=1"
+emflgs+=" -s EMTERPRETIFY_ASYNC=1"
+emflgs+=" -s ASSERTIONS=1"
+# emflgs+=" -s EMTERPRETIFY_WHITELIST=$(node ./_em_whitelist_funcs.js)"
+fi
+
+
 # emflgs+=" --js-library ./src/Unix/js/library_workerthread.js"
 
 emenv_debug="y"
 if [ -z $emenv_debug ]; then
 emflgs+=" -O3 -g4"
+elif [ -n "$use_emterpreter" ]; then
+emflgs+=" -O3 -g3" # sourcemaps not supported in emterpreter
 else
 emflgs+=" -O0 -g4"
-
 # emflgs+=" -s UNALIGNED_MEMORY=1 " # not supported in fastcomp
 # emflgs+=" -s SAFE_HEAP=1 "
 # emflgs+=" -s SAFE_HEAP_LOG=1 "

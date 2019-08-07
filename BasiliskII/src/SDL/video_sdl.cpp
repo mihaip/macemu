@@ -71,6 +71,8 @@
 
 #ifdef EMSCRIPTEN
 #include <emscripten.h>
+// #define EMSCRIPTEN_SAB 1
+// #define EMSCRIPTEN_EMTERPRET 1
 #endif
 // Supported video modes
 using std::vector;
@@ -140,7 +142,9 @@ static int screen_depth;							// Depth of current screen
 static SDL_Cursor *sdl_cursor;						// Copy of Mac cursor
 static SDL_Color sdl_palette[256];					// Color palette to be used as CLUT and gamma table
 static bool sdl_palette_changed = false;			// Flag: Palette changed, redraw thread must set new colors
+#ifndef EMSCRIPTEN
 static const int sdl_eventmask = SDL_MOUSEEVENTMASK | SDL_KEYEVENTMASK | SDL_VIDEOEXPOSEMASK | SDL_QUITMASK | SDL_ACTIVEEVENTMASK;
+#endif
 
 // Mutex to protect SDL events
 static SDL_mutex *sdl_events_lock = NULL;
@@ -514,6 +518,7 @@ static void add_mode(int type, int width, int height, int resolution_id, int byt
 static void set_mac_frame_buffer(SDL_monitor_desc &monitor, int depth, bool native_byte_order)
 {
 #if !REAL_ADDRESSING && !DIRECT_ADDRESSING
+
 	int layout = FLAYOUT_DIRECT;
 	if (depth == VIDEO_DEPTH_16BIT)
 		layout = (screen_depth == 15) ? FLAYOUT_HOST_555 : FLAYOUT_HOST_565;
@@ -524,6 +529,7 @@ static void set_mac_frame_buffer(SDL_monitor_desc &monitor, int depth, bool nati
 	else
 		MacFrameLayout = FLAYOUT_DIRECT;
 	monitor.set_mac_frame_base(MacFrameBaseMac);
+		printf("monitor.set_mac_frame_base(MacFrameBaseMac) native_byte_order=%d MacFrameLayout=%d\n",native_byte_order,MacFrameLayout);
 
 	// Set variables used by UAE memory banking
 	const VIDEO_MODE &mode = monitor.get_current_mode();
@@ -531,6 +537,7 @@ static void set_mac_frame_buffer(SDL_monitor_desc &monitor, int depth, bool nati
 	MacFrameSize = VIDEO_MODE_ROW_BYTES * VIDEO_MODE_Y;
 	InitFrameBufferMapping();
 #else
+	printf("monitor.set_mac_frame_base(Host2MacAddr(the_buffer))\n");
 	monitor.set_mac_frame_base(Host2MacAddr(the_buffer));
 #endif
 	D(bug("monitor.mac_frame_base = %08x\n", monitor.get_mac_frame_base()));
@@ -794,6 +801,7 @@ uint8 *alloc_browser_pixels(int32 size_to_copy) {
 	if (browser_pixels) {
 		return browser_pixels;
 	}
+	printf("actually allocating browser pixels\n");
 	return (uint8 *)malloc(size_to_copy * sizeof(uint8));
 }
 
@@ -827,7 +835,7 @@ driver_window::driver_window(SDL_monitor_desc &m)
 
 	// Create surface
 	int depth = sdl_depth_of_video_depth(VIDEO_MODE_DEPTH);
-#ifdef EMSCRIPTEN
+#ifdef EMSCRIPTEN_SAB
 	depth = 32; // always 32 is easier
 #else
 	if ((s = SDL_SetVideoMode(width, height, depth, SDL_HWSURFACE)) == NULL)
@@ -841,8 +849,8 @@ driver_window::driver_window(SDL_monitor_desc &m)
 		// printf("driver_window checking browser_pixels %p != %p \n", (void *)browser_pixels, (void *)NULL);
 		// assert(browser_pixels == NULL);
 		browser_pixels = alloc_browser_pixels(size_to_copy);
-		// assert(browser_pixels);
-		// printf("driver_window allocated %p\n", (void *)browser_pixels);
+		assert(browser_pixels);
+		printf("driver_window allocated browser_pixels=%p\n", (void *)browser_pixels);
 		#ifdef EMSCRIPTEN
 		EM_ASM_({
 	  	Module.debugPointer($0);
@@ -1731,8 +1739,10 @@ static bool is_modifier_key(SDL_KeyboardEvent const & e)
 	case SDLK_LALT:
 	case SDLK_RMETA:
 	case SDLK_LMETA:
+	#ifndef EMSCRIPTEN
 	case SDLK_LSUPER:
 	case SDLK_RSUPER:
+	#endif
 	case SDLK_MODE:
 	case SDLK_COMPOSE:
 		return true;
@@ -1831,8 +1841,10 @@ static int kc_decode(SDL_keysym const & ks, bool key_down)
 	case SDLK_LMETA: return 0x3a;
 	case SDLK_RMETA: return 0x3a;
 #endif
+	#ifndef EMSCRIPTEN
 	case SDLK_LSUPER: return 0x3a; // "Windows" key
 	case SDLK_RSUPER: return 0x3a;
+	#endif
 	case SDLK_MENU: return 0x32;
 	case SDLK_CAPSLOCK: return 0x39;
 	case SDLK_NUMLOCK: return 0x47;
@@ -1897,6 +1909,7 @@ static int event2keycode(SDL_KeyboardEvent const &ev, bool key_down)
 
 static void handle_events(void)
 {
+	#ifndef EMSCRIPTEN
 	SDL_Event events[SDL_N_EVENTS_PER_HANDLER];
 	const int n_max_events = sizeof(events) / sizeof(events[0]);
 	int n_events;
@@ -2028,6 +2041,8 @@ static void handle_events(void)
 			}
 		}
 	}
+
+	#endif
 }
 
 
@@ -2396,6 +2411,9 @@ static void update_display_static(driver_base *drv)
 	#endif
 }
 
+static int emterpret_frame_count = 0; 
+
+
 // Static display update (fixed frame rate, bounding boxes based)
 // XXX use NQD bounding boxes to help detect dirty areas?
 static void update_display_static_bbox(driver_base *drv)
@@ -2404,14 +2422,7 @@ static void update_display_static_bbox(driver_base *drv)
 	assert(Screen_blit);
 	const VIDEO_MODE &mode = drv->mode;
 
-	// Allocate bounding boxes for SDL_UpdateRects()
-	const int N_PIXELS = 64;
-	const int n_x_boxes = (VIDEO_MODE_X + N_PIXELS - 1) / N_PIXELS;
-	const int n_y_boxes = (VIDEO_MODE_Y + N_PIXELS - 1) / N_PIXELS;
-	SDL_Rect *boxes = (SDL_Rect *)alloca(sizeof(SDL_Rect) * n_x_boxes * n_y_boxes);
-	int nr_boxes = 0;
-
-#ifdef EMSCRIPTEN
+#ifdef EMSCRIPTEN_SAB
 	// Update the surface from Mac screen
 	const int bytes_per_row = VIDEO_MODE_ROW_BYTES;
 	const int bytes_per_pixel = bytes_per_row / VIDEO_MODE_X;
@@ -2439,9 +2450,24 @@ static void update_display_static_bbox(driver_base *drv)
 	// 	}
 	// }
 
+	// TODO: this will do nothing inside EMSCRIPTEN_SAB block
+  #ifdef EMSCRIPTEN_MAINTHREAD
+  	emterpret_frame_count++;
+
+  	if (emterpret_frame_count % 60 == 0) {
+			EM_ASM_({
+				console.log("frames rendered", $0);
+			}, emterpret_frame_count);
+  	}
+    emscripten_sleep(1);
+  #else
 	if (REUSE_VIDEO_BUFFER) {
 		// uint8 *browser_pixels = drv->browser_pixels;
 
+	// printf("Screen_blit from the_buffer=%p to browser_pixels=%p of size=%u depth=%d\n",(void *)the_buffer, (void *)browser_pixels, size_to_copy, VIDEO_MODE_DEPTH);
+		EM_ASM_({
+	  	Module.summarizeBuffer($0, $1, $2, $3);
+		}, the_buffer, VIDEO_MODE_X, VIDEO_MODE_Y, 32);
 		assert(browser_pixels);
 		Screen_blit((uint8 *)browser_pixels, the_buffer, size_to_copy);
 		EM_ASM_({
@@ -2454,7 +2480,15 @@ static void update_display_static_bbox(driver_base *drv)
 	  	Module.blit($0, $1, $2, $3, $4);
 		}, pixels, VIDEO_MODE_X, VIDEO_MODE_Y, 32, !IsDirectMode(mode));
 	}
+	#endif
 #else
+	// Allocate bounding boxes for SDL_UpdateRects()
+	const int N_PIXELS = 64;
+	const int n_x_boxes = (VIDEO_MODE_X + N_PIXELS - 1) / N_PIXELS;
+	const int n_y_boxes = (VIDEO_MODE_Y + N_PIXELS - 1) / N_PIXELS;
+	SDL_Rect *boxes = (SDL_Rect *)alloca(sizeof(SDL_Rect) * n_x_boxes * n_y_boxes);
+	int nr_boxes = 0;
+
 	// Lock surface, if required
 	if (SDL_MUSTLOCK(drv->s))
 		SDL_LockSurface(drv->s);
@@ -2510,6 +2544,18 @@ static void update_display_static_bbox(driver_base *drv)
 	// Refresh display
 	if (nr_boxes)
 		SDL_UpdateRects(drv->s, nr_boxes, boxes);
+
+
+  #ifdef EMSCRIPTEN_EMTERPRET
+  	emterpret_frame_count++;
+
+  	if (emterpret_frame_count % 60 == 0) {
+			EM_ASM_({
+				console.log("frames rendered", $0);
+			}, emterpret_frame_count);
+  	}
+    emscripten_sleep(1);
+  #endif
 #endif
 }
 
@@ -2648,7 +2694,11 @@ static void VideoRefreshInit(void)
 static inline void do_video_refresh(void)
 {
 	#ifdef EMSCRIPTEN
-	sdl_fake_read_input();
+		#ifdef EMSCRIPTEN_MAINTHREAD
+			// TODO implement event handling for mainthread
+		#else
+			sdl_fake_read_input();
+		#endif
 	#else
 	// Handle SDL events
 	handle_events();
