@@ -1,0 +1,60 @@
+commands run in Unix dir
+
+```
+cd src/Unix
+```
+
+# make for native
+
+```
+macemujs_conf_native=1 ./_embuild.sh 
+make clean
+make
+./BasiliskII
+```
+
+## make for browser
+
+```
+# (once, otherwise configure will say c compiler is broken)
+source ~/code/tools/emsdk_portable/emsdk_env.sh
+
+./_embuild.sh 
+make clean
+make
+./_emafterbuild.sh 
+```
+
+
+
+
+# wasm
+```
+# set use_wasm in _emenv.sh and build, then
+node js/webserver.js . # supports serving wasm with correct content type
+open http://127.0.0.1:8080/BasiliskII-worker.html 
+
+# pthreads (old)
+
+
+## make for native with pthreads
+
+```
+macemujs_conf_native=1 macemujs_conf_pthreads=1 ./_embuild.sh 
+make clean
+make
+./BasiliskII
+```
+
+
+## make for browser with pthreads
+
+```
+# (once, otherwise configure will say c compiler is broken)
+source ~/code/tools/emsdk_portable/emsdk_env.sh
+
+macemujs_conf_pthreads=1 ./_embuild.sh 
+make clean
+make
+macemujs_conf_pthreads=1 ./_emafterbuild.sh 
+``
