@@ -141,7 +141,10 @@ static int screen_depth;							// Depth of current screen
 static SDL_Cursor *sdl_cursor;						// Copy of Mac cursor
 static SDL_Color sdl_palette[256];					// Color palette to be used as CLUT and gamma table
 static bool sdl_palette_changed = false;			// Flag: Palette changed, redraw thread must set new colors
+#ifndef EMSCRIPTEN
+// this breaks in clang :(
 static const int sdl_eventmask = SDL_MOUSEEVENTMASK | SDL_KEYEVENTMASK | SDL_VIDEOEXPOSEMASK | SDL_QUITMASK | SDL_ACTIVEEVENTMASK;
+#endif
 
 // Mutex to protect SDL events
 static SDL_mutex *sdl_events_lock = NULL;
