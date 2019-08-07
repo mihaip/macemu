@@ -2465,6 +2465,7 @@ static void update_display_static_bbox(driver_base *drv)
 		// uint8 *browser_pixels = drv->browser_pixels;
 
 	// printf("Screen_blit from the_buffer=%p to browser_pixels=%p of size=%u depth=%d\n",(void *)the_buffer, (void *)browser_pixels, size_to_copy, VIDEO_MODE_DEPTH);
+
 		EM_ASM_({
 	  	Module.summarizeBuffer($0, $1, $2, $3);
 		}, the_buffer, VIDEO_MODE_X, VIDEO_MODE_Y, 32);
