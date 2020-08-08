@@ -316,6 +316,9 @@ function tryToSendInput() {
     var inputEvent = inputQueue[i];
     switch (inputEvent.type) {
       case 'mousemove':
+        if (hasMouseMove) {
+          break;
+        }
         hasMouseMove = true;
         mouseMoveX += inputEvent.dx;
         mouseMoveY += inputEvent.dy;

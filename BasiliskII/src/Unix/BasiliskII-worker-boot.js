@@ -33,8 +33,8 @@ function pathGetFilename(path) {
 }
 
 function addAutoloader(module) {
-  var loadDatafiles = function() {
-    module.autoloadFiles.forEach(function(filepath) {
+  var loadDatafiles = function () {
+    module.autoloadFiles.forEach(function (filepath) {
       module.FS_createPreloadedFile(
         '/',
         pathGetFilename(filepath),
@@ -96,7 +96,7 @@ var LockStates = {
 
 var Module = null;
 
-self.onmessage = function(msg) {
+self.onmessage = function (msg) {
   console.log('init worker');
   startEmulator(Object.assign({}, msg.data, {singleThreadedEmscripten: true}));
 };
@@ -205,12 +205,12 @@ function startEmulator(parentConfig) {
   var AudioBufferQueue = [];
 
   Module = {
-    autoloadFiles: ['MacOS753', 'DCImage.img', 'Quadra-650.rom', 'prefs'],
+    autoloadFiles: parentConfig.autoloadFiles,
 
-    arguments: ['--config', 'prefs'],
+    arguments: parentConfig.arguments || ['--config', 'prefs'],
     canvas: null,
 
-    onRuntimeInitialized: function() {
+    onRuntimeInitialized: function () {
       if (INSTRUMENT_MALLOC) {
         // instrument malloc and free
         const oldMalloc = Module._malloc;
@@ -233,7 +233,7 @@ function startEmulator(parentConfig) {
       self.Module = Module;
     },
 
-    summarizeBuffer: function(bufPtr, width, height, depth) {
+    summarizeBuffer: function (bufPtr, width, height, depth) {
       return;
       var length = width * height * (depth === 32 ? 4 : 1); // 32bpp or 8bpp
 
