@@ -71,7 +71,6 @@
 
 #ifdef EMSCRIPTEN
 #include <emscripten.h>
-#define EMSCRIPTEN_SAB_WORKER 0
 #endif
 // Supported video modes
 using std::vector;

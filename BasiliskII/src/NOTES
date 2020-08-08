@@ -15,12 +15,19 @@ make
 
 ## make for browser
 
+there are two versions:
+- 'mainthread': doesn't use worker or SAB
+- 'worker': uses worker with SAB (set environment variable `macemujs_conf_worker=y`)
+
+
+first, make sure you've already built for native once, as this produces generated CPU source files
+
 ```
 # (once, otherwise configure will say c compiler is broken)
 source ~/code/tools/emsdk_portable/emsdk_env.sh
 
 ./_embuild.sh 
-make clean # actually maybe just mostlyclean?? i think we need the generated CPU files
+make mostlyclean # using 'clean' will clobber the the generated CPU files
 make
 ./_emafterbuild.sh 
 ```
@@ -34,8 +41,13 @@ make
 node js/webserver.js . # supports serving wasm with correct content type
 open http://127.0.0.1:8080/BasiliskII-worker.html 
 
-# pthreads (old)
 
+
+
+-------------
+
+
+# pthreads (old)
 
 ## make for native with pthreads
 

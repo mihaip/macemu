@@ -27,8 +27,8 @@ emflgs+=" -s DEMANGLE_SUPPORT=1"
 fi
 
 if [[ -n "$macemujs_conf_worker" ]]; then
-  echo "BUILD_AS_WORKER=1"
-  emflgs+=" -s BUILD_AS_WORKER=1"
+  echo "DEMSCRIPTEN_SAB_WORKER=1"
+  emflgs+=" -s DEMSCRIPTEN_SAB_WORKER=1"
 fi
 
 export macemujs_conf_pthreads=""

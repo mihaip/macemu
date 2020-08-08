@@ -93,8 +93,8 @@
     </div>
 
     <canvas
-      width="800"
-      height="600"
+      width="640"
+      height="480"
       class="emscripten"
       id="canvas"
       oncontextmenu="event.preventDefault()"
@@ -103,7 +103,7 @@
     <script type="text/javascript">
       window.basiliskConfig = {
         singleThreadedEmscripten: true,
-        baseURL: '/',
+        baseURL: '/mainthread/',
         autoloadFiles: ['MacOS753', 'DCImage.img', 'Quadra-650.rom', 'prefs'],
         arguments: ['--config', 'prefs'],
       };
