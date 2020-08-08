@@ -20,7 +20,7 @@ In future this implementation could be improved by moving all of the shared memo
 See the NOTES file for more options. Basic build:
 
 ```sh
-source /path/to/emsdk/emsdk_set_env.sh
+source /path/to/emsdk/emsdk_env.sh
 
 cd ./BasiliskII/src/Unix/
 

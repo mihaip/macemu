@@ -9,11 +9,10 @@ LDFLAGS="-L/opt/X11/lib"
 DEFINES="-DDEBUG"
 
 if [[ -z "$macemujs_conf_native" ]]; then
-  echo "building for emscripten"
-  # TODO: not use EMSCRIPTEN var
-  export CC="$EMSCRIPTEN/emcc"
-  export CXX="$EMSCRIPTEN/em++"
-  export AR="$EMSCRIPTEN/emar"
+  echo "building for emscripten" 
+  export CC="emcc"
+  export CXX="em++"
+  export AR="emar"
   export EMSCRIPTEN=1
   echo "with flags '$EMFLAGS'"
 else
