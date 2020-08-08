@@ -35,3 +35,5 @@ BasiliskII.wast
 BasiliskII.wasm.pre
 
 # files which change when testing native
+DCImage.img
+MacOS753

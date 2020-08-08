@@ -11,7 +11,7 @@ const fs = require('fs');
 
 const port = 8080;
 const host = `http://127.0.0.1:${port}`;
-const serveDir = process.argv[2];
+const serveDir = path.resolve(process.argv[2] || process.cwd());
 
 const filesMimeTypesCache = {};
 function getMimeType(filepath) {
@@ -37,7 +37,7 @@ function getMimeType(filepath) {
   return filesMimeTypesCache[filepath];
 }
 
-const server = http.createServer(function(req, res) {
+const server = http.createServer(function (req, res) {
   try {
     const serverpath =
       req.url[req.url.length - 1] == '/' ? req.url + 'index.html' : req.url;

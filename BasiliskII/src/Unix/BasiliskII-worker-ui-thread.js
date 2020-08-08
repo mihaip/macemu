@@ -88,6 +88,17 @@ var gainNode = audioContext.createGain();
 gainNode.gain.value = 1;
 gainNode.connect(audioContext.destination);
 
+function addEventListenerOnce(element, eventType, cb) {
+  element.addEventListener(eventType, function () {
+    element.removeEventListener(eventType, cb);
+    cb.apply(this, arguments);
+  });
+}
+
+addEventListenerOnce(canvas, 'click', function () {
+  audioContext.resume();
+});
+
 var warningLastTime = {};
 var warningCount = {};
 function throttledWarning(message, type = '') {
@@ -135,7 +146,11 @@ function openAudio() {
 
     // assertion
     if (curtime > audio.nextPlayTime && audio.nextPlayTime != 0) {
-      // console.log('warning: Audio callback had starved sending audio by ' + (curtime - audio.nextPlayTime) + ' seconds.');
+      console.log(
+        'warning: Audio callback had starved sending audio by ' +
+          (curtime - audio.nextPlayTime) +
+          ' seconds.'
+      );
     }
 
     // Don't ever start buffer playbacks earlier from current time than a given constant 'audio.bufferingDelay', since a browser
@@ -147,21 +162,34 @@ function openAudio() {
     audio.nextPlayTime = playtime + audio.bufferDurationSecs;
   };
 
+  var getBlockBufferLastWarningTime = 0;
+  var getBlockBufferWarningCount = 0;
   audio.getBlockBuffer = function getBlockBuffer() {
     // audio chunk layout
     // 0: lock state
     // 1: pointer to next chunk
-    // 2 to (2+buffersize): audio buffer
+    // 2->buffersize+2: audio buffer
     var curChunkIndex = audio.nextChunkIndex;
     var curChunkAddr = curChunkIndex * audioBlockChunkSize;
 
     if (audioDataBufferView[curChunkAddr] !== LockStates.UI_THREAD_LOCK) {
-      if (audio.gotFirstBlock) {
-        // throttledWarning('UI thread tried to read audio data from worker-locked chunk');
+      getBlockBufferWarningCount++;
+      if (
+        audio.gotFirstBlock &&
+        Date.now() - getBlockBufferLastWarningTime > 5000
+      ) {
+        throttledWarning(
+          `UI thread tried to read audio data from worker-locked chunk ${getBlockBufferWarningCount} times`
+        );
+        // debugger
+        getBlockBufferLastWarningTime = Date.now();
+        getBlockBufferWarningCount = 0;
       }
       return null;
     }
     audio.gotFirstBlock = true;
+
+    // debugger
 
     var blockBuffer = audioDataBufferView.slice(
       curChunkAddr + 2,
@@ -170,6 +198,8 @@ function openAudio() {
     audio.nextChunkIndex = audioDataBufferView[curChunkAddr + 1];
     // console.assert(audio.nextChunkIndex != curChunkIndex, `curChunkIndex=${curChunkIndex} == nextChunkIndex=${audio.nextChunkIndex}`)
     audioDataBufferView[curChunkAddr] = LockStates.EMUL_THREAD_LOCK;
+    // debugger
+    // console.log(`got buffer=${curChunkIndex}, next=${audio.nextChunkIndex}`)
     return blockBuffer;
   };
 
@@ -181,11 +211,13 @@ function openAudio() {
     for (var c = 0; c < audio.channels; ++c) {
       var channelData = dstAudioBuffer.getChannelData(c);
       if (channelData.length != blockSize) {
-        throw 'Web Audio output buffer length mismatch! Destination size: ' +
+        throw (
+          'Web Audio output buffer length mismatch! Destination size: ' +
           channelData.length +
           ' samples vs expected ' +
           blockSize +
-          ' samples!';
+          ' samples!'
+        );
       }
       var blockBufferI16 = new Int16Array(blockBuffer.buffer);
 
@@ -353,41 +385,67 @@ function tryToSendInput() {
   releaseInputLock();
   inputQueue = remainingKeyEvents;
 }
-canvas.addEventListener('mousemove', function(event) {
+canvas.addEventListener('mousemove', function (event) {
   inputQueue.push({type: 'mousemove', dx: event.offsetX, dy: event.offsetY});
 });
-canvas.addEventListener('mousedown', function(event) {
+canvas.addEventListener('mousedown', function (event) {
   inputQueue.push({type: 'mousedown'});
 });
-canvas.addEventListener('mouseup', function(event) {
+canvas.addEventListener('mouseup', function (event) {
   inputQueue.push({type: 'mouseup'});
 });
-window.addEventListener('keydown', function(event) {
+window.addEventListener('keydown', function (event) {
   inputQueue.push({type: 'keydown', keyCode: event.keyCode});
 });
-window.addEventListener('keyup', function(event) {
+window.addEventListener('keyup', function (event) {
   inputQueue.push({type: 'keyup', keyCode: event.keyCode});
 });
 
-var workerConfig = {
-  inputBuffer: inputBuffer,
-  inputBufferSize: INPUT_BUFFER_SIZE,
-  screenBuffer: screenBuffer,
-  screenBufferSize: SCREEN_BUFFER_SIZE,
-  videoModeBuffer: videoModeBuffer,
-  videoModeBufferSize: VIDEO_MODE_BUFFER_SIZE,
-  audioDataBuffer: audioDataBuffer,
-  audioDataBufferSize: AUDIO_DATA_BUFFER_SIZE,
-  audioBlockBufferSize: audio.bufferSize,
-  audioBlockChunkSize: audioBlockChunkSize,
-  SCREEN_WIDTH: SCREEN_WIDTH,
-  SCREEN_HEIGHT: SCREEN_HEIGHT,
-};
+var workerConfig = Object.assign(
+  {
+    inputBuffer: inputBuffer,
+    inputBufferSize: INPUT_BUFFER_SIZE,
+    screenBuffer: screenBuffer,
+    screenBufferSize: SCREEN_BUFFER_SIZE,
+    videoModeBuffer: videoModeBuffer,
+    videoModeBufferSize: VIDEO_MODE_BUFFER_SIZE,
+    audioDataBuffer: audioDataBuffer,
+    audioDataBufferSize: AUDIO_DATA_BUFFER_SIZE,
+    audioBlockBufferSize: audio.bufferSize,
+    audioBlockChunkSize: audioBlockChunkSize,
+    SCREEN_WIDTH: SCREEN_WIDTH,
+    SCREEN_HEIGHT: SCREEN_HEIGHT,
+  },
+  basiliskConfig
+);
 
-if (singleThreadedEmscripten) {
-  var worker = new Worker('BasiliskII-worker-boot.js');
+if (basiliskConfig.singleThreadedEmscripten) {
+  var worker = new Worker(basiliskConfig.baseURL + 'BasiliskII-worker-boot.js');
 
   worker.postMessage(workerConfig);
+  worker.onmessage = function (e) {
+    if (
+      e.data.type === 'emulator_ready' ||
+      e.data.type === 'emulator_loading'
+    ) {
+      document.body.className =
+        e.data.type === 'emulator_ready' ? '' : 'loading';
+
+      const progressElement =
+        basiliskConfig.progressElement || document.getElementById('progress');
+      if (progressElement) {
+        if (e.data.type === 'emulator_loading') {
+          progressElement.value = Math.max(10, e.data.completion * 100);
+          progressElement.max = 100;
+          progressElement.hidden = false;
+        } else {
+          progressElement.value = null;
+          progressElement.max = null;
+          progressElement.hidden = true;
+        }
+      }
+    }
+  };
 }
 
 function drawScreen() {
@@ -437,11 +495,21 @@ function asyncLoop() {
 openAudio();
 asyncLoop();
 
-if (!singleThreadedEmscripten) {
-  document.write('<script src="BasiliskII-worker-boot.js"></' + 'script>');
+if (!basiliskConfig.singleThreadedEmscripten) {
+  document.write(
+    '<script src="' +
+      basiliskConfig.baseURL +
+      'BasiliskII-worker-boot.js"></' +
+      'script>'
+  );
 
   startEmulator(workerConfig);
 
-  document.write('<script src="BasiliskII.js"></' + 'script>');
+  console.log(
+    '<script src="' + basiliskConfig.baseURL + 'BasiliskII.js"></' + 'script>'
+  );
+  document.write(
+    '<script src="' + basiliskConfig.baseURL + 'BasiliskII.js"></' + 'script>'
+  );
   console.log('returned from emscripten main');
 }
