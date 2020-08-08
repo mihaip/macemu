@@ -18,6 +18,10 @@ if [[ -z "$macemujs_conf_native" ]]; then
 else
   echo "building for native"
 fi
+PLATFORM_FLAGS=""
+if [[ -n "$macemujs_conf_native" ]]; then
+PLATFORM_FLAGS+=" --enable-sdl-audio"
+fi
 
 # env CFLAGS=$CFLAGS CPPFLAGS=$CPPFLAGS LDFLAGS=$LDFLAGS
 # CFLAGS="-g -fsanitize=address" CPPFLAGS="-g -fsanitize=address" LDFLAGS="-g -fsanitize=address" \
@@ -31,7 +35,7 @@ fi
   --enable-addressing="banks" \
   --enable-sdl-video \
   --disable-vosf \
-  # --enable-sdl-audio \
+  $PLATFORM_FLAGS
 
 if [[ -z "$macemujs_conf_native" ]]; then
   cat ./em_config.h >> ./config.h

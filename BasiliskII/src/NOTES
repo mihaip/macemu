@@ -40,8 +40,7 @@ make
 # set use_wasm in _emenv.sh and build, then
 node js/webserver.js . # supports serving wasm with correct content type
 open http://127.0.0.1:8080/BasiliskII-worker.html 
-
-
+```
 
 
 -------------
