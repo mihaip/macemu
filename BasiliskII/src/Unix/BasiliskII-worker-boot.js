@@ -204,6 +204,10 @@ function startEmulator(parentConfig) {
 
   var AudioBufferQueue = [];
 
+  if (!parentConfig.autoloadFiles) {
+    throw new Error('autoloadFiles missing in config');
+  }
+
   Module = {
     autoloadFiles: parentConfig.autoloadFiles,
 
@@ -350,6 +354,20 @@ function startEmulator(parentConfig) {
       return inputBufferView[addr];
     },
 
+    totalDependencies: 0,
+    monitorRunDependencies: function (left) {
+      this.totalDependencies = Math.max(this.totalDependencies, left);
+
+      if (left == 0) {
+        postMessage({type: 'emulator_ready'});
+      } else {
+        postMessage({
+          type: 'emulator_loading',
+          completion: (this.totalDependencies - left) / this.totalDependencies,
+        });
+      }
+    },
+
     print: console.log.bind(console),
 
     printErr: console.warn.bind(console),
@@ -362,6 +380,6 @@ function startEmulator(parentConfig) {
   addCustomAsyncInit(Module);
 
   if (parentConfig.singleThreadedEmscripten) {
-    importScripts('BasiliskII.js');
+    importScripts((parentConfig.baseURL || '') + 'BasiliskII.js');
   }
 }

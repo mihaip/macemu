@@ -25,7 +25,17 @@
     <canvas width="640" height="480" class="emscripten" id="canvas" oncontextmenu="event.preventDefault()"></canvas>
     
     <script type="text/javascript">
-      var singleThreadedEmscripten = true;
+      window.basiliskConfig = {
+        singleThreadedEmscripten: true,
+        baseURL: '/',
+        autoloadFiles: [
+          'MacOS753_.img',
+          'DCImage.img',
+          'Quadra-650.rom',
+          'prefs',
+        ],
+        arguments: ['--config', 'prefs'],
+      }; 
     </script>
     <script src="BasiliskII-worker-ui-thread.js"></script>
   </body>
