@@ -1,25 +1,11 @@
 #!/bin/bash
+set -euo pipefail
 
-export macemujs_conf_worker=$macemujs_conf_worker
+export macemujs_conf_worker=${macemujs_conf_worker:-}
 source ./_emenv.sh
 
-CFLAGS="-I/opt/X11/include -Iem_config.h $EMFLAGS -g"
-CPPFLAGS="-I/opt/X11/include $EMFLAGS -g"
-LDFLAGS="-L/opt/X11/lib"
-DEFINES="-DDEBUG"
-
-if [[ -z "$macemujs_conf_native" ]]; then
-  echo "building for emscripten" 
-  export CC="emcc"
-  export CXX="em++"
-  export AR="emar"
-  export EMSCRIPTEN=1
-  echo "with flags '$EMFLAGS'"
-else
-  echo "building for native"
-fi
 PLATFORM_FLAGS=""
-if [[ -n "$macemujs_conf_native" ]]; then
+if [[ -n "${macemujs_conf_native:-}" ]]; then
 PLATFORM_FLAGS+=" --enable-sdl-audio"
 fi
 
@@ -37,7 +23,7 @@ fi
   --disable-vosf \
   $PLATFORM_FLAGS
 
-if [[ -z "$macemujs_conf_native" ]]; then
+if [[ -z "${macemujs_conf_native:-}" ]]; then
   cat ./em_config.h >> ./config.h
 else
   {

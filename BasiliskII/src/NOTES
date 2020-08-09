@@ -7,7 +7,7 @@ cd src/Unix
 # make for native
 
 ```
-macemujs_conf_native=1 ./_embuild.sh 
+macemujs_conf_native=1 macemujs_conf_cpu=1 ./_embuild.sh 
 make clean
 make
 ./BasiliskII
@@ -20,13 +20,13 @@ there are two versions:
 - 'worker': uses worker with SAB (set environment variable `macemujs_conf_worker=y`)
 
 
-first, make sure you've already built for native once, as this produces generated CPU source files
+first, make sure you've already built for native once (including the var macemujs_conf_cpu=1), as this produces generated CPU source files
 
 ```
 # (once, otherwise configure will say c compiler is broken)
-source ~/code/tools/emsdk_portable/emsdk_env.sh
+source ~/code/tools/emsdk/emsdk_env.sh
 
-./_embuild.sh 
+macemujs_conf_cpu=1 ./_embuild.sh 
 make mostlyclean # using 'clean' will clobber the the generated CPU files
 make
 ./_emafterbuild.sh 
@@ -43,10 +43,19 @@ open http://127.0.0.1:8080/BasiliskII-worker.html
 ```
 
 
+## how the build system was modified for emscripten
+
+changes have been made to the input files to autoconf (BasiliskII/src/Unix/configure.ac and BasiliskII/src/Unix/Makefile.in)
+certain options which might be automatically enabled based on detected functionality in the host environment, which doesn't exist in the target (web), have been hard coded (eg. disabling ethernet, assembly optimizations etc)
+
+as the basilisk build system compiles a c++ binary which then generates more code, we first need to build for native to generate this code, then build again for web, deleting compiled object files but not the generated CPU code. the mostlyclean make rule deletes only the correct files.
+
+
+
 -------------
 
 
-# pthreads (old)
+# build with pthreads (old, doesn't work)
 
 ## make for native with pthreads
 

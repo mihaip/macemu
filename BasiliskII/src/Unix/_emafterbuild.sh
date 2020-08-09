@@ -21,6 +21,6 @@ emcc \
 
 
 
-if [[ -n "$macemujs_conf_worker" ]]; then
+if [[ -z "$macemujs_conf_worker" ]]; then
   cp -a ./BasiliskII.* ./mainthread/
 fi
