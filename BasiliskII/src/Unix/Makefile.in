@@ -21,7 +21,12 @@ CFLAGS = @CFLAGS@
 CXXFLAGS = @CXXFLAGS@
 CPUINCLUDES_FLAGS=@CPUINCLUDES@
 CPUINCLUDES_FLAGS:=$(CPUINCLUDES_FLAGS:-I%=-I@top_srcdir@/%)
-CPPFLAGS = @CPPFLAGS@ -I@top_srcdir@/../include -I@top_srcdir@/. -I. $(CPUINCLUDES_FLAGS) -I@top_srcdir@/../slirp
+CPPFLAGS = @CPPFLAGS@ -I@top_srcdir@/../include -I@top_srcdir@/. -I. $(CPUINCLUDES_FLAGS) 
+ifdef macemujs_conf_native
+	# this breaks under emscripten because libcxx accidentally includes a file inside this dir :(
+	CPPFLAGS += -I@top_srcdir@/../slirp
+endif
+
 DEFS = @DEFS@ @DEFINES@ -D_REENTRANT -DDATADIR=\"$(datadir)/$(APP)\"
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
@@ -167,7 +172,7 @@ uninstall:
 	rmdir $(DESTDIR)$(datadir)/$(APP)
 
 mostlyclean:
-	rm -f $(PROGS) $(OBJ_DIR)/* core* *.core *~ *.bak
+	rm -f $(PROGS) $(OBJS) core* *.core *~ *.bak
 
 clean: mostlyclean
 	rm -f cpuemu.cpp cpudefs.cpp cputmp*.s cpufast*.s cpustbl.cpp cputbl.h compemu.cpp compstbl.cpp comptbl.h
