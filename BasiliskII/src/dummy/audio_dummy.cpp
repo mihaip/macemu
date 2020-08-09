@@ -153,7 +153,6 @@ void audio_set_speaker_volume(uint32 vol)
 {
 }
 
-
 void audio_write_blocks(int blocks_to_write)
 {
 }
