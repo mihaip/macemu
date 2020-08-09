@@ -29,6 +29,7 @@ cputbl.h
 # build
 a.out
 a.out.js
+a.out.js.map
 BasiliskII.wasm
 BasiliskII.wasm.map
 BasiliskII.wast
