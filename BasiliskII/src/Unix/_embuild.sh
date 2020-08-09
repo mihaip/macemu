@@ -2,6 +2,7 @@
 set -euo pipefail
 
 export macemujs_conf_worker=${macemujs_conf_worker:-}
+export macemujs_conf_mainthread=${macemujs_conf_mainthread:-}
 source ./_emenv.sh
 
 PLATFORM_FLAGS=""
@@ -11,6 +12,8 @@ fi
 
 # env CFLAGS=$CFLAGS CPPFLAGS=$CPPFLAGS LDFLAGS=$LDFLAGS
 # CFLAGS="-g -fsanitize=address" CPPFLAGS="-g -fsanitize=address" LDFLAGS="-g -fsanitize=address" \
+
+
 ./autogen.sh \
   --without-esd \
   --without-gtk \
@@ -25,6 +28,11 @@ fi
 
 if [[ -z "${macemujs_conf_native:-}" ]]; then
   cat ./em_config.h >> ./config.h
+  if [[ -n "$macemujs_conf_mainthread" ]]; then
+    echo "#define EMSCRIPTEN_MAINTHREAD 1" >> ./config.h
+  else
+    echo "#define EMSCRIPTEN_MAINTHREAD 1" >> ./config.h
+  fi
 else
   {
     echo "#define USE_CPU_EMUL_SERVICES 1"

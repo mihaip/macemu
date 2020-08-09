@@ -146,11 +146,7 @@ function openAudio() {
 
     // assertion
     if (curtime > audio.nextPlayTime && audio.nextPlayTime != 0) {
-      console.log(
-        'warning: Audio callback had starved sending audio by ' +
-          (curtime - audio.nextPlayTime) +
-          ' seconds.'
-      );
+      // console.log('warning: Audio callback had starved sending audio by ' + (curtime - audio.nextPlayTime) + ' seconds.');
     }
 
     // Don't ever start buffer playbacks earlier from current time than a given constant 'audio.bufferingDelay', since a browser
@@ -162,8 +158,6 @@ function openAudio() {
     audio.nextPlayTime = playtime + audio.bufferDurationSecs;
   };
 
-  var getBlockBufferLastWarningTime = 0;
-  var getBlockBufferWarningCount = 0;
   audio.getBlockBuffer = function getBlockBuffer() {
     // audio chunk layout
     // 0: lock state
@@ -173,23 +167,12 @@ function openAudio() {
     var curChunkAddr = curChunkIndex * audioBlockChunkSize;
 
     if (audioDataBufferView[curChunkAddr] !== LockStates.UI_THREAD_LOCK) {
-      getBlockBufferWarningCount++;
-      if (
-        audio.gotFirstBlock &&
-        Date.now() - getBlockBufferLastWarningTime > 5000
-      ) {
-        throttledWarning(
-          `UI thread tried to read audio data from worker-locked chunk ${getBlockBufferWarningCount} times`
-        );
-        // debugger
-        getBlockBufferLastWarningTime = Date.now();
-        getBlockBufferWarningCount = 0;
+      if (audio.gotFirstBlock) {
+        // throttledWarning('UI thread tried to read audio data from worker-locked chunk');
       }
       return null;
     }
     audio.gotFirstBlock = true;
-
-    // debugger
 
     var blockBuffer = audioDataBufferView.slice(
       curChunkAddr + 2,

@@ -7,7 +7,7 @@ cd src/Unix
 # make for native
 
 ```
-macemujs_conf_native=1 macemujs_conf_cpu=1 ./_embuild.sh 
+macemujs_conf_native=1  ./_embuild.sh 
 make clean
 make
 ./BasiliskII
@@ -16,8 +16,8 @@ make
 ## make for browser
 
 there are two versions:
-- 'mainthread': doesn't use worker or SAB
-- 'worker': uses worker with SAB (set environment variable `macemujs_conf_worker=y`)
+- 'mainthread': doesn't use worker or SAB (set environment variable `macemujs_conf_mainthread=1`) 
+- 'worker': uses worker with SAB 
 
 
 first, make sure you've already built for native once (including the var macemujs_conf_cpu=1), as this produces generated CPU source files
@@ -25,18 +25,21 @@ first, make sure you've already built for native once (including the var macemuj
 ```
 # (once, otherwise configure will say c compiler is broken)
 source ~/code/tools/emsdk/emsdk_env.sh
-
+ 
+# building for SharedArrayBuffer worker mode
 macemujs_conf_cpu=1 ./_embuild.sh 
+# or for main thread mode
+macemujs_conf_mainthread=1 macemujs_conf_cpu=1 ./_embuild.sh 
+
+
 make mostlyclean # using 'clean' will clobber the the generated CPU files
 make
 ./_emafterbuild.sh 
 ```
 
 
-
-
 # wasm
-```
+``` 
 # set use_wasm in _emenv.sh and build, then
 node js/webserver.js . # supports serving wasm with correct content type
 open http://127.0.0.1:8080/BasiliskII-worker.html 
@@ -52,22 +55,8 @@ as the basilisk build system compiles a c++ binary which then generates more cod
 
 
 
--------------
 
-
-# build with pthreads (old, doesn't work)
-
-## make for native with pthreads
-
-```
-macemujs_conf_native=1 macemujs_conf_pthreads=1 ./_embuild.sh 
-make clean
-make
-./BasiliskII
-```
-
-
-## make for browser with pthreads
+## make for browser with pthreads (old, broken)
 
 ```
 # (once, otherwise configure will say c compiler is broken)

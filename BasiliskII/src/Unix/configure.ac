@@ -639,8 +639,14 @@ if [[ -z "${macemujs_conf_native_os// }" ]]; then
   # echo "adding browser io"
   # EXTRASYSSRCS="$EXTRASYSSRCS ../browser/browser_io.cpp"
 
-  echo "using audio_oss_esd"
-  AUDIOSRC=audio_oss_esd.cpp
+
+  if [[ -z "${macemujs_conf_mainthread// }" ]]; then
+    echo "using hacked version of audio_oss_esd for sab target"
+    AUDIOSRC=audio_oss_esd.cpp
+  else
+    echo "disabling audio for mainthread js target"
+    AUDIOSRC=../dummy/audio_dummy.cpp
+  fi
 else
   echo "target_os=$target_os"
 case "$target_os" in

@@ -1,6 +1,7 @@
 #!/bin/bash
 
 export macemujs_conf_worker=$macemujs_conf_worker
+export macemujs_conf_mainthread=$macemujs_conf_mainthread
 source ./_emenv.sh
 
 echo "converting bitcode with flags '$EMFLAGS'"
@@ -21,6 +22,6 @@ emcc \
 
 
 
-if [[ -z "$macemujs_conf_worker" ]]; then
+if [[ -n "$macemujs_conf_mainthread" ]]; then
   cp -a ./BasiliskII.* ./mainthread/
 fi
