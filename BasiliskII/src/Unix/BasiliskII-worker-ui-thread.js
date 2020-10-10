@@ -270,27 +270,6 @@ function openAudio() {
   audio.timer = setTimeout(audio.caller, 1);
 }
 
-function acquireTwoStateLock(bufferView, lockIndex) {
-  var res = Atomics.compareExchange(
-    bufferView,
-    lockIndex,
-    LockStates.EMUL_THREAD_LOCK,
-    LockStates.UI_THREAD_LOCK
-  );
-  if (res === LockStates.EMUL_THREAD_LOCK) {
-    return true;
-  }
-  return false;
-}
-
-function releaseTwoStateLock(bufferView, lockIndex) {
-  Atomics.store(bufferView, lockIndex, LockStates.EMUL_THREAD_LOCK); // unlock
-
-  Atomics_notify(bufferView, lockIndex);
-}
-
-releaseTwoStateLock(videoModeBufferView, 9);
-
 function acquireLock(bufferView, lockIndex) {
   var res = Atomics.compareExchange(
     bufferView,
@@ -436,16 +415,7 @@ function drawScreen() {
   const numPixels = SCREEN_WIDTH * SCREEN_HEIGHT;
   const expandedFromPalettedMode = videoModeBufferView[3];
   const start = audioContext.currentTime;
-  // if (!acquireTwoStateLock(videoModeBufferView, 9)) {
-  //   console.log('skipped frame in client');
-  //   return;
-  // }
-  // while (acquireTwoStateLock(videoModeBufferView, 9)) {
-  //   if (audioContext.currentTime - start > 0.1666666) {
-  //     console.warn('failed to acquire video lock, dropping frame');
-  //     return;
-  //   }
-  // }
+  // if we were going to lock the framebuffer, this is where we'd do it
   if (expandedFromPalettedMode) {
     for (var i = 0; i < numPixels; i++) {
       // palette
@@ -463,8 +433,6 @@ function drawScreen() {
       pixelsRGBA[i * 4 + 3] = 255; // full opacity
     }
   }
-
-  // releaseTwoStateLock(videoModeBufferView, 9);
 
   canvasCtx.putImageData(imageData, 0, 0);
 }

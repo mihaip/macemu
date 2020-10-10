@@ -20,12 +20,15 @@ there are two versions:
 - 'worker': uses worker with SAB 
 
 
-first, make sure you've already built for native once (including the var macemujs_conf_cpu=1), as this produces generated CPU source files
 
 ```
 # (once, otherwise configure will say c compiler is broken)
 source ~/code/tools/emsdk/emsdk_env.sh
  
+# first, make sure you've already built for native once (including the var macemujs_conf_cpu=1), as this produces generated CPU source files
+macemujs_conf_cpu=1 macemujs_conf_native=1 ./_embuild.sh && make clean && make
+
+
 # building for SharedArrayBuffer worker mode
 macemujs_conf_cpu=1 ./_embuild.sh 
 # or for main thread mode
