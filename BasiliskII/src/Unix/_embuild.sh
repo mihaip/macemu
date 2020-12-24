@@ -28,8 +28,8 @@ fi
 
 if [[ -z "${macemujs_conf_native:-}" ]]; then
   cat ./em_config.h >> ./config.h
-  if [[ -n "$macemujs_conf_mainthread" ]]; then
-    echo "#define EMSCRIPTEN_MAINTHREAD 1" >> ./config.h
+  if [[ -z "$macemujs_conf_mainthread" ]]; then
+    echo "#define EMSCRIPTEN_SAB 1" >> ./config.h
   else
     echo "#define EMSCRIPTEN_MAINTHREAD 1" >> ./config.h
   fi

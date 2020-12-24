@@ -16,36 +16,48 @@ make
 ## make for browser
 
 there are two versions:
-- 'mainthread': doesn't use worker or SAB (set environment variable `macemujs_conf_mainthread=1`) 
-- 'worker': uses worker with SAB 
+- 'worker': uses worker with SharedArrayBuffer. this is the default
+- 'mainthread': doesn't use worker or SAB. to build this version, set the environment variable `macemujs_conf_mainthread=1` when building
 
 
 
 ```
 # (once, otherwise configure will say c compiler is broken)
-source ~/code/tools/emsdk/emsdk_env.sh
+source path/to/emsdk/emsdk_env.sh
+# eg. source ~/code/tools/emsdk/emsdk_env.sh
  
 # first, make sure you've already built for native once (including the var macemujs_conf_cpu=1), as this produces generated CPU source files
 macemujs_conf_cpu=1 macemujs_conf_native=1 ./_embuild.sh && make clean && make
 
 
+# _embuild.sh runs the configure script. you have to choose which version to build at this point (worker or mainthread)
+
 # building for SharedArrayBuffer worker mode
 macemujs_conf_cpu=1 ./_embuild.sh 
-# or for main thread mode
+# or, for 'mainthread' mode
 macemujs_conf_mainthread=1 macemujs_conf_cpu=1 ./_embuild.sh 
 
+# now actually build it
+# use 'mostlyclean' because 'clean' will delete the generated CPU files
+# `make mostlyclean` is required when switching between native and web builds, to remove the native .o files 
+make mostlyclean && make && ./_emafterbuild.sh
 
-make mostlyclean # using 'clean' will clobber the the generated CPU files
-make
-./_emafterbuild.sh 
+# run it
+# this webserver serves with correct cross-origin isolation headers for firefox
+# should open http://127.0.0.1:8080/ automatically
+node js/webserver.js .
+
+# click on BasiliskII-worker.html or BasiliskII-mainthread.html
+# depending which version you built
 ```
 
 
 # wasm
 ``` 
-# set use_wasm in _emenv.sh and build, then
+# build with macemujs_conf_wasm=1
+# or set use_wasm=1 in _emenv.sh and build
+
 node js/webserver.js . # supports serving wasm with correct content type
-open http://127.0.0.1:8080/BasiliskII-worker.html 
 ```
 
 
@@ -54,7 +66,7 @@ open http://127.0.0.1:8080/BasiliskII-worker.html
 changes have been made to the input files to autoconf (BasiliskII/src/Unix/configure.ac and BasiliskII/src/Unix/Makefile.in)
 certain options which might be automatically enabled based on detected functionality in the host environment, which doesn't exist in the target (web), have been hard coded (eg. disabling ethernet, assembly optimizations etc)
 
-as the basilisk build system compiles a c++ binary which then generates more code, we first need to build for native to generate this code, then build again for web, deleting compiled object files but not the generated CPU code. the mostlyclean make rule deletes only the correct files.
+as the basilisk build system compiles a c++ binary which then generates more code, we first need to build for native to generate this code, then build again for web, deleting compiled object files but not the generated CPU code. the 'mostlyclean' make rule deletes only the correct files.
 
 
 

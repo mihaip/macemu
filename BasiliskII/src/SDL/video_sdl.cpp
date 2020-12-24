@@ -2461,6 +2461,7 @@ static void update_display_static_bbox(driver_base *drv)
 				console.log("frames rendered", $0);
 			}, emterpret_frame_count);
   	}
+  	#error "should be unreachable"
     emscripten_sleep(1);
   #else
 	if (REUSE_VIDEO_BUFFER) {
@@ -2557,6 +2558,8 @@ static void update_display_static_bbox(driver_base *drv)
 				console.log("frames rendered", $0);
 			}, emterpret_frame_count);
   	}
+
+  	#error "should be unreachable"
     emscripten_sleep(1);
   #endif
 #endif

@@ -42,9 +42,12 @@ emflgs+=" -s ASSERTIONS=2 "
 emflgs+=" -s DEMANGLE_SUPPORT=1"
 fi
 
-if [[ -n "${macemujs_conf_worker:-}" ]]; then
-  echo "DEMSCRIPTEN_SAB_WORKER=1"
-  emflgs+=" -s DEMSCRIPTEN_SAB_WORKER=1"
+if [[ -z "${macemujs_conf_mainthread:-}" ]]; then
+  echo "EMSCRIPTEN_SAB=1"
+  emflgs+=" -DEMSCRIPTEN_SAB=1"
+else
+  echo "EMSCRIPTEN_MAINTHREAD=1"
+  emflgs+=" -DEMSCRIPTEN_MAINTHREAD=1"
 fi
 
 export macemujs_conf_pthreads=""

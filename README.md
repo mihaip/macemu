@@ -17,17 +17,4 @@ In future this implementation could be improved by moving all of the shared memo
 
 ## build instructions
 
-See the NOTES file for more options. Basic build:
-
-```sh
-source /path/to/emsdk/emsdk_env.sh
-
-cd ./BasiliskII/src/Unix/
-
-./_embuild.sh 
-make clean
-make
-./_emafterbuild.sh 
-http-server .
-open http://localhost:8080/BasiliskII-worker.html
-```
+See the [NOTES](BasiliskII/src/NOTES) file
