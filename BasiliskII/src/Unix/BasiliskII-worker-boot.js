@@ -127,42 +127,6 @@ function startEmulator(parentConfig) {
     parentConfig.audioDataBufferSize
   );
 
-  function waitForTwoStateLock(bufferView, lockIndex) {
-    // Atomics.wait(
-    //   bufferView,
-    //   lockIndex,
-    //   LockStates.UI_THREAD_LOCK
-    // );
-
-    // while (!tryToAcquireCyclicalLock(bufferView, lockIndex)) {
-    //   // spin
-    // }
-    // if (!tryToAcquireCyclicalLock(bufferView, lockIndex)) {
-    //   throw new Error('failed to acquire lock for index', lockIndex);
-    // }
-    //
-    //
-    if (Atomics.load(bufferView, lockIndex) === LockStates.UI_THREAD_LOCK) {
-      while (
-        Atomics.compareExchange(
-          bufferView,
-          lockIndex,
-          LockStates.UI_THREAD_LOCK,
-          LockStates.EMUL_THREAD_LOCK
-        ) !== LockStates.UI_THREAD_LOCK
-      ) {
-        // spin
-        // TODO use wait and wake
-      }
-    } else {
-      // already unlocked
-    }
-  }
-
-  function releaseTwoStateLock(bufferView, lockIndex) {
-    Atomics.store(bufferView, lockIndex, LockStates.UI_THREAD_LOCK); // unlock
-  }
-
   function tryToAcquireCyclicalLock(bufferView, lockIndex) {
     var res = Atomics.compareExchange(
       bufferView,
@@ -222,7 +186,7 @@ function startEmulator(parentConfig) {
         console.error('instrumenting malloc and free');
 
         Module._malloc = function _wrapmalloc($0) {
-          $0 = $0 | 0;
+          var $0 = $0 | 0;
           var $1 = oldMalloc($0);
           memAllocAdd($1);
           return $1 | 0;
@@ -279,10 +243,6 @@ function startEmulator(parentConfig) {
     },
 
     blit: function blit(bufPtr, width, height, depth, usingPalette) {
-      // console.time('await worker video lock');
-      // waitForTwoStateLock(videoModeBufferView, 9);
-      // console.timeEnd('await worker video lock');
-
       videoModeBufferView[0] = width;
       videoModeBufferView[1] = height;
       videoModeBufferView[2] = depth;
@@ -291,7 +251,6 @@ function startEmulator(parentConfig) {
       for (var i = 0; i < length; i++) {
         screenBufferView[i] = Module.HEAPU8[bufPtr + i];
       }
-      // releaseTwoStateLock(videoModeBufferView, 9);
     },
 
     openAudio: function openAudio(
