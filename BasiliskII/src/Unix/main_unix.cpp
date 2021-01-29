@@ -568,7 +568,7 @@ int fake_main(int argc, char **argv)
 #endif
 #endif
 
-#ifndef EMSCRIPTEN
+#ifndef EMSCRIPTEN_SAB
 #ifdef USE_SDL
 	// Initialize SDL system
 	int sdl_flags = 0;
@@ -587,7 +587,7 @@ int fake_main(int argc, char **argv)
 	}
 	atexit(SDL_Quit);
 #endif
-#endif // not EMSCRIPTEN
+#endif // not EMSCRIPTEN_SAB
 
 	// Init system routines
 	SysInit();

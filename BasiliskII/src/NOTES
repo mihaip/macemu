@@ -17,7 +17,7 @@ make
 
 there are two versions:
 - 'worker': uses worker with SharedArrayBuffer. this is the default
-- 'mainthread': doesn't use worker or SAB. to build this version, set the environment variable `macemujs_conf_mainthread=1` when building
+- 'mainthread': (currently broken) doesn't use worker or SAB. to build this version, set the environment variable `macemujs_conf_mainthread=1` when building
 
 
 

@@ -142,10 +142,11 @@ static int screen_depth;							// Depth of current screen
 static SDL_Cursor *sdl_cursor;						// Copy of Mac cursor
 static SDL_Color sdl_palette[256];					// Color palette to be used as CLUT and gamma table
 static bool sdl_palette_changed = false;			// Flag: Palette changed, redraw thread must set new colors
-#ifndef EMSCRIPTEN
+#ifndef EMSCRIPTEN_SAB
 // this breaks in clang :(
 static const int sdl_eventmask = SDL_MOUSEEVENTMASK | SDL_KEYEVENTMASK | SDL_VIDEOEXPOSEMASK | SDL_QUITMASK | SDL_ACTIVEEVENTMASK;
 #endif
+
 
 // Mutex to protect SDL events
 static SDL_mutex *sdl_events_lock = NULL;
@@ -1909,14 +1910,27 @@ static int event2keycode(SDL_KeyboardEvent const &ev, bool key_down)
 
 #define SDL_N_EVENTS_PER_HANDLER 1
 
+#ifdef EMSCRIPTEN_MAINTHREAD
+int SDL_PeepEvents(SDL_Event*      events,
+                   int             numevents,
+                   SDL_eventaction action,
+                   Uint32          minType,
+                   Uint32          maxType);
+#endif
+
 static void handle_events(void)
 { 
-	#ifndef EMSCRIPTEN
+	#ifndef EMSCRIPTEN_SAB
 	SDL_Event events[SDL_N_EVENTS_PER_HANDLER];
 	const int n_max_events = sizeof(events) / sizeof(events[0]);
 	int n_events;
 
+#ifdef EMSCRIPTEN_MAINTHREAD
+	while ((n_events = SDL_PeepEvents(events, n_max_events, SDL_GETEVENT, /*SDL_FIRSTEVENT*/0, /*SDL_LASTEVENT*/0xFFFF)) > 0) {
+#else
 	while ((n_events = SDL_PeepEvents(events, n_max_events, SDL_GETEVENT, sdl_eventmask)) > 0) {
+#endif
+
 		for (int i = 0; i < n_events; i++) {
 			SDL_Event const & event = events[i];
 			switch (event.type) {
@@ -2486,6 +2500,8 @@ static void update_display_static_bbox(driver_base *drv)
 	}
 	#endif
 #else
+
+
 	// Allocate bounding boxes for SDL_UpdateRects()
 	const int N_PIXELS = 64;
 	const int n_x_boxes = (VIDEO_MODE_X + N_PIXELS - 1) / N_PIXELS;
@@ -2548,7 +2564,6 @@ static void update_display_static_bbox(driver_base *drv)
 	// Refresh display
 	if (nr_boxes)
 		SDL_UpdateRects(drv->s, nr_boxes, boxes);
-
 
   #ifdef EMSCRIPTEN_EMTERPRET
   	emterpret_frame_count++;
@@ -2669,6 +2684,7 @@ static void video_refresh_window_static(void)
 		else
 			update_display_static(drv);
 	}
+
 }
 
 
@@ -2699,12 +2715,8 @@ static void VideoRefreshInit(void)
 
 static inline void do_video_refresh(void)
 {
-	#ifdef EMSCRIPTEN 
-		#ifdef EMSCRIPTEN_MAINTHREAD
-			// TODO implement event handling for mainthread
-		#else
-			sdl_fake_read_input(); 
-		#endif
+	#ifdef EMSCRIPTEN_SAB 
+	sdl_fake_read_input();  
 	#else
 	// Handle SDL events
 	handle_events();
@@ -2726,8 +2738,19 @@ void VideoRefresh(void)
 	if (!redraw_thread_active)
 		return;
 
+
+	int needs_frame = EM_ASM_INT({
+		return Module.needsFrame;
+	});
+
+	if (!needs_frame) return;
+
 	// Process pending events and update display
 	do_video_refresh();
+
+	EM_ASM(
+		Module.drawFrame();
+	);
 }
 
 const int VIDEO_REFRESH_HZ = 60;

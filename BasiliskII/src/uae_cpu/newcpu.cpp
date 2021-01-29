@@ -48,6 +48,10 @@ B2_mutex *spcflags_lock = NULL;
 #include "mon_disass.h"
 #endif
 
+#ifdef EMSCRIPTEN
+#include <emscripten.h> 
+#endif
+
 bool quit_program = false;
 struct flag_struct regflags;
 
@@ -1386,9 +1390,50 @@ void m68k_do_execute (void)
 		}
 	}
 }
-
+static int em_execute_depth = 0;
 void m68k_execute (void)
 {
+#ifdef EMSCRIPTEN_MAINTHREAD
+    // if (em_execute_depth > 3) {
+    //   return;
+    // }
+    em_execute_depth++;
+    int cycle_count = 0;
+    double start_time = EM_ASM_DOUBLE({
+      return performance.now();
+    });
+    for (;;) {
+      if (quit_program)
+      break;
+      for (;;) {
+        uae_u32 opcode = GET_OPCODE; 
+        (*cpufunctbl[opcode])(opcode);
+        cpu_check_ticks();
+        if (SPCFLAGS_TEST(SPCFLAG_ALL_BUT_EXEC_RETURN)) {
+          if (m68k_do_specialties())
+            return;
+        }
+        cycle_count++;
+        // every x cycles, check if we've been executing for ideal frame duration
+        if (cycle_count > 20000) {
+          double current_time = EM_ASM_DOUBLE({
+            return performance.now();
+          });
+
+          if (current_time - start_time > 16) {
+            // yield to browser
+            em_execute_depth--;
+            return;
+          } else {
+            cycle_count = 0;
+          }
+        }
+      }
+    }
+    em_execute_depth--;
+
+#else
+    
 #if USE_JIT
     ++m68k_execute_depth;
 #endif
@@ -1399,6 +1444,8 @@ void m68k_execute (void)
     }
 #if USE_JIT
     --m68k_execute_depth;
+#endif
+
 #endif
 }
 

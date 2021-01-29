@@ -33,6 +33,11 @@
 #include "compiler/compemu.h"
 
 
+#ifdef EMSCRIPTEN
+#include <emscripten.h> 
+#endif
+
+
 // RAM and ROM pointers
 uint32 RAMBaseMac = 0;		// RAM base (Mac address space) gb-- initializer is important
 uint8 *RAMBaseHost;			// RAM base (host address space)
@@ -131,20 +136,35 @@ void InitFrameBufferMapping(void)
 #endif
 }
 
+#ifdef EMSCRIPTEN
+static void execution_block() {
+	EM_ASM(
+		Module.startExecutionBlock();
+	);
+	m68k_execute();
+}
+#endif
+
 /*
  *  Reset and start 680x0 emulation (doesn't return)
  */
 
 void Start680x0(void)
 {
-	m68k_reset();
+  m68k_reset();
 #if USE_JIT
     if (UseJIT)
-	m68k_compile_execute();
+  m68k_compile_execute();
     else
 #endif
-	m68k_execute();
+
+#ifdef EMSCRIPTEN_MAINTHREAD
+  emscripten_set_main_loop(execution_block, 0, 1);
+#else
+  m68k_execute();
+#endif
 }
+
 
 
 /*
