@@ -1,9 +1,9 @@
 disk MacOS753
-disk DCImage.img
+disk Games.img
 extfs /
 screen win/800/600
-seriala 
-serialb 
+seriala
+serialb
 udptunnel false
 udpport 6066
 rom Quadra-650.rom
