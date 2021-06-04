@@ -34,6 +34,9 @@ AC_ARG_ENABLE(sdl-audio,     [  --enable-sdl-audio      use SDL for audio [defau
 AC_ARG_ENABLE(sdl-framework,    [  --enable-sdl-framework  use SDL framework [default=no]], [WANT_SDL_FRAMEWORK=$enableval], [WANT_SDL_FRAMEWORK=no])
 AC_ARG_ENABLE(sdl-framework-prefix,    [  --enable-sdl-framework-prefix=PFX    default=/Library/Frameworks], [SDL_FRAMEWORK="$enableval"], [SDL_FRAMEWORK=/Library/Frameworks])
 
+dnl Emscripten options.
+AC_ARG_ENABLE(emscripten,     [  --enable-emscripten      Emscripten is the real target [default=no]], [WANT_EMSCRIPTEN=$enableval], [WANT_EMSCRIPTEN=no])
+
 dnl JIT compiler options.
 AC_ARG_ENABLE(jit-compiler,  [  --enable-jit-compiler   enable JIT compiler [default=no]], [WANT_JIT=$enableval], [WANT_JIT=no])
 AC_ARG_ENABLE(jit-debug,     [  --enable-jit-debug      activate native code disassemblers [default=no]], [WANT_JIT_DEBUG=$enableval], [WANT_JIT_DEBUG=no])
@@ -79,10 +82,10 @@ AC_ARG_WITH(gtk,             [  --with-gtk              use GTK user interface [
   [WANT_GTK="gtk2 gtk"])
 AC_ARG_WITH(mon,             [  --with-mon              use mon as debugger [default=yes]], [WANT_MON=$withval], [WANT_MON=yes])
 
-AC_ARG_WITH(bincue,   
+AC_ARG_WITH(bincue,
   AS_HELP_STRING([--with-bincue], [Allow cdrom image files in bin/cue mode]))
 
-AC_ARG_WITH(libvhd,   
+AC_ARG_WITH(libvhd,
   AS_HELP_STRING([--with-libvhd], [Enable VHD disk images]))
 
 
@@ -93,7 +96,7 @@ AC_CANONICAL_TARGET
 
 AC_ARG_VAR(macemujs_conf_native, compile for native target)
 AC_ARG_VAR(macemujs_conf_cpu, compile for cpu codegen)
-
+AC_SUBST(EMSCRIPTEN, [$WANT_EMSCRIPTEN])
 
 dnl Target OS type (target is host if not cross-compiling).
 case "$target_os" in
@@ -282,7 +285,7 @@ AS_IF([test  "x$have_libvhd" = "xyes" ], [
 	   LIBS="$LIBS -lvhd"
 	   case $target_os in
 	   linux*)
-	   LIBS="$LIBS -luuid" 
+	   LIBS="$LIBS -luuid"
 	   esac
 	   AC_CHECK_LIB(vhd, vhd_open)
 	   AC_CHECK_LIB(vhd, vhd_io_read)
@@ -661,7 +664,7 @@ freebsd*)
   DEFINES="$DEFINES -DBSD_COMP"
   CXXFLAGS="$CXXFLAGS -fpermissive"
   dnl Check for the CAM library
-  AC_CHECK_LIB(cam, cam_open_btl, HAVE_LIBCAM=yes, HAVE_LIBCAM=no) 
+  AC_CHECK_LIB(cam, cam_open_btl, HAVE_LIBCAM=yes, HAVE_LIBCAM=no)
   if [[ "x$HAVE_LIBCAM" = "xno" ]]; then
     AC_MSG_WARN([Cannot find libcam for SCSI management, disabling SCSI support.])
   else
@@ -1043,7 +1046,7 @@ fi dnl HAVE_MMAP_VM
 dnl Check if we can modify the __PAGEZERO segment for use as Low Memory
 AC_CACHE_CHECK([whether __PAGEZERO can be Low Memory area 0x0000-0x2000],
   ac_cv_pagezero_hack, [
-  ac_cv_pagezero_hack=no 
+  ac_cv_pagezero_hack=no
   if AC_TRY_COMMAND([Darwin/testlmem.sh 0x2000]); then
     ac_cv_pagezero_hack=yes
     dnl might as well skip the test for mmap-able low memory
@@ -1587,7 +1590,7 @@ dnl Enable JIT compiler, if possible.
 if [[ "x$WANT_JIT" = "xyes" -a "x$CAN_JIT" ]]; then
   JITSRCS="$JITSRCS ../uae_cpu/compiler/compemu_support.cpp ../uae_cpu/compiler/compemu_fpp.cpp compstbl.o cpustbl_nf.o"
   DEFINES="$DEFINES -DUSE_JIT -DUSE_JIT_FPU"
-  
+
   if [[ "x$WANT_JIT_DEBUG" = "xyes" ]]; then
     if [[ "x$WANT_MON" = "xyes" ]]; then
       DEFINES="$DEFINES -DJIT_DEBUG=1"
@@ -1846,5 +1849,6 @@ echo Floating-Point emulation core .......... : $FPE_CORE
 echo Assembly optimizations ................. : $ASM_OPTIMIZATIONS
 echo Addressing mode ........................ : $ADDRESSING_MODE
 echo Bad memory access recovery type ........ : $sigsegv_recovery
+echo Emscripten ............................. : $WANT_EMSCRIPTEN
 echo
 echo "Configuration done. Now type \"make\" (or \"gmake\")."

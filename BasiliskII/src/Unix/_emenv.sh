@@ -11,7 +11,7 @@ emflgs+=" -s ASM_JS=1"
 emflgs+=" -s WASM=0"
 emflgs+=" -D__ELF__"
 # emflgs+=" -s BINARYEN_METHOD='asmjs'"
-else 
+else
 emflgs+=" -D__wasm__"
 emflgs+=" -s WASM=1"
 # emflgs+=" -s BINARYEN_METHOD='native-wasm'"
@@ -28,18 +28,21 @@ fi
 
 # emflgs+=" --js-library ./src/Unix/js/library_workerthread.js"
 
-emenv_debug="y"
+defines=""
+emenv_debug=""
 if [ -z $emenv_debug ]; then
 emflgs+=" -O3 -g4"
 elif [ -n "$use_emterpreter" ]; then
 emflgs+=" -O3 -g3" # sourcemaps not supported in emterpreter
+defines+=" -DDEBUG"
 else
 emflgs+=" -O0 -g4"
 # emflgs+=" -s UNALIGNED_MEMORY=1 " # not supported in fastcomp
 # emflgs+=" -s SAFE_HEAP=1 "
 # emflgs+=" -s SAFE_HEAP_LOG=1 "
-emflgs+=" -s ASSERTIONS=2 " 
+emflgs+=" -s ASSERTIONS=2 "
 emflgs+=" -s DEMANGLE_SUPPORT=1"
+defines+=" -DDEBUG"
 fi
 
 if [[ -z "${macemujs_conf_mainthread:-}" ]]; then
@@ -58,19 +61,17 @@ if [[ -n "$macemujs_conf_pthreads" ]]; then
 fi
 
 export EMFLAGS=$emflgs
-
-
-export DEFINES="-DDEBUG"
+export DEFINES=$defines
 
 if [[ -z "${macemujs_conf_native:-}" ]]; then
-  echo "building for emscripten" 
+  echo "building for emscripten"
   export CC="emcc"
   export CXX="em++"
   export AR="emar"
   export EMSCRIPTEN=1
   export CFLAGS="-I/opt/X11/include -Iem_config.h $EMFLAGS -g"
   export CPPFLAGS="-I/opt/X11/include $EMFLAGS -g"
-  export LDFLAGS="-L/opt/X11/lib"
+  export LDFLAGS="-L/opt/X11/lib -s FORCE_FILESYSTEM=1 -s TOTAL_MEMORY=536870912"
   echo "with flags '$EMFLAGS'"
 else
   echo "building for native"

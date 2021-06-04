@@ -890,7 +890,11 @@ driver_window::driver_window(SDL_monitor_desc &m)
 	if (!use_vosf) {
 		printf("allocating the_buffer, the_buffer_copy\n");
 		// Allocate memory for frame buffer
+#if EMSCRIPTEN_SAB
+		the_buffer_size = (aligned_height + 2) * width * depth;
+#else
 		the_buffer_size = (aligned_height + 2) * s->pitch;
+#endif
 		the_buffer_copy = (uint8 *)calloc(1, the_buffer_size);
 		#ifdef BROWSER_VIDEO
 		the_buffer = (uint8 *)malloc(the_buffer_size);

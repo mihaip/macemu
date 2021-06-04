@@ -8,6 +8,8 @@ source ./_emenv.sh
 PLATFORM_FLAGS=""
 if [[ -n "${macemujs_conf_native:-}" ]]; then
 PLATFORM_FLAGS+=" --enable-sdl-audio"
+else
+PLATFORM_FLAGS+=" --enable-emscripten"
 fi
 
 # env CFLAGS=$CFLAGS CPPFLAGS=$CPPFLAGS LDFLAGS=$LDFLAGS
