@@ -2,10 +2,10 @@
 obj/*
 BasiliskII
 BasiliskII.bc
-BasiliskII.dSYM 
-BasiliskII.data 
-BasiliskII.html 
-BasiliskII.js 
+BasiliskII.dSYM
+BasiliskII.data
+BasiliskII.html
+BasiliskII.js
 BasiliskII.js.map
 BasiliskII.js.mem
 BasiliskIIDebug
@@ -30,6 +30,8 @@ cputbl.h
 a.out
 a.out.js
 a.out.js.map
+a.wasm
+a.wasm.map
 BasiliskII.wasm
 BasiliskII.wasm.map
 BasiliskII.wast

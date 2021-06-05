@@ -293,6 +293,9 @@ function releaseInputLock() {
   releaseLock(inputBufferView, InputBufferAddresses.globalLockAddr);
 }
 function tryToSendInput() {
+  if (!inputQueue.length) {
+    return;
+  }
   if (!acquireLock(inputBufferView, InputBufferAddresses.globalLockAddr)) {
     return;
   }

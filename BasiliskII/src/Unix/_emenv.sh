@@ -71,7 +71,7 @@ if [[ -z "${macemujs_conf_native:-}" ]]; then
   export EMSCRIPTEN=1
   export CFLAGS="-I/opt/X11/include -Iem_config.h $EMFLAGS -g"
   export CPPFLAGS="-I/opt/X11/include $EMFLAGS -g"
-  export LDFLAGS="-L/opt/X11/lib -s FORCE_FILESYSTEM=1 -s TOTAL_MEMORY=536870912"
+  export LDFLAGS="-L/opt/X11/lib $EMFLAGS"
   echo "with flags '$EMFLAGS'"
 else
   echo "building for native"

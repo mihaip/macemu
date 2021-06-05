@@ -305,6 +305,16 @@ function startEmulator(parentConfig) {
       console.log('debugPointer', ptr);
     },
 
+    idleWait: function() {
+      Atomics.wait(
+          inputBufferView,
+          InputBufferAddresses.globalLockAddr,
+          LockStates.READY_FOR_UI_THREAD,
+          // Time out after 8 milliseconds to make sure that we don't miss
+          // any frames if there are animations on the screen.
+          8);
+    },
+
     acquireInputLock: acquireInputLock,
 
     InputBufferAddresses: InputBufferAddresses,

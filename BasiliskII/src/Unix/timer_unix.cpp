@@ -24,6 +24,10 @@
 
 #include <errno.h>
 
+#ifdef EMSCRIPTEN
+#include <emscripten.h>
+#endif
+
 #define DEBUG 0
 #include "debug.h"
 
@@ -371,10 +375,16 @@ void idle_wait(void)
 		return;
 	}
 	UNLOCK_IDLE;
-#endif
-
+#else
+#ifdef EMSCRIPTEN
+	EM_ASM({
+		Module.idleWait();
+	});
+#else
 	// Fallback: sleep 10 ms
 	Delay_usec(10000);
+#endif
+#endif
 #endif
 }
 

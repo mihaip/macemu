@@ -31,4 +31,4 @@ mousewheellines 3
 dsp /dev/dsp
 mixer /dev/mixer
 ignoresegv false
-idlewait false
+idlewait true
