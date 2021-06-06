@@ -205,7 +205,6 @@ function startEmulator(parentConfig) {
     },
 
     summarizeBuffer: function (bufPtr, width, height, depth) {
-      return;
       var length = width * height * (depth === 32 ? 4 : 1); // 32bpp or 8bpp
 
       let zeroChannelCount = 0;
@@ -230,7 +229,6 @@ function startEmulator(parentConfig) {
           }
         }
       }
-      if (nonZeroAlphaCount > zeroAlphaCount) debugger;
       console.log(
         'buffer at',
         bufPtr,
@@ -252,9 +250,7 @@ function startEmulator(parentConfig) {
       videoModeBufferView[2] = depth;
       videoModeBufferView[3] = usingPalette;
       var length = width * height * (depth === 32 ? 4 : 1); // 32bpp or 8bpp
-      for (var i = 0; i < length; i++) {
-        screenBufferView[i] = Module.HEAPU8[bufPtr + i];
-      }
+      screenBufferView.set(Module.HEAPU8.subarray(bufPtr, bufPtr + length));
       nextExpectedBlitTime = performance.now() + 16;
     },
 

@@ -63,7 +63,7 @@
 #include "video_blit.h"
 #include "vm_alloc.h"
 
-#define DEBUG 1
+#define DEBUG 0
 #include "debug.h"
 
 #define REUSE_VIDEO_BUFFER 1
@@ -2469,14 +2469,13 @@ static void update_display_static_bbox(driver_base *drv)
     emscripten_sleep(1);
   #else
 	if (REUSE_VIDEO_BUFFER) {
-		// uint8 *browser_pixels = drv->browser_pixels;
-
-	// printf("Screen_blit from the_buffer=%p to browser_pixels=%p of size=%u depth=%d\n",(void *)the_buffer, (void *)browser_pixels, size_to_copy, VIDEO_MODE_DEPTH);
-
+#if DEBUG
+		printf("Screen_blit from the_buffer=%p to browser_pixels=%p of size=%u depth=%d\n",(void *)the_buffer, (void *)browser_pixels, size_to_copy, VIDEO_MODE_DEPTH);
 		EM_ASM_({
 	  	Module.summarizeBuffer($0, $1, $2, $3);
 		}, the_buffer, VIDEO_MODE_X, VIDEO_MODE_Y, 32);
 		assert(browser_pixels);
+#endif
 		Screen_blit((uint8 *)browser_pixels, the_buffer, size_to_copy);
 		EM_ASM_({
 	  	Module.blit($0, $1, $2, $3, $4);

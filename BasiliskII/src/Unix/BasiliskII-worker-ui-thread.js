@@ -36,7 +36,7 @@ audio.nextChunkIndex = 0;
 
 var SCREEN_BUFFER_SIZE = SCREEN_WIDTH * SCREEN_HEIGHT * 4; // 32bpp;
 
-var canvasCtx = canvas.getContext('2d');
+var canvasCtx = canvas.getContext("2d", {desynchronized: true});
 var imageData = canvasCtx.createImageData(SCREEN_WIDTH, SCREEN_HEIGHT);
 
 var screenBuffer = new SharedArrayBuffer(SCREEN_BUFFER_SIZE);
@@ -415,27 +415,25 @@ if (basiliskConfig.singleThreadedEmscripten) {
 
 function drawScreen() {
   const pixelsRGBA = imageData.data;
-  const numPixels = SCREEN_WIDTH * SCREEN_HEIGHT;
   const expandedFromPalettedMode = videoModeBufferView[3];
   const start = audioContext.currentTime;
   // if we were going to lock the framebuffer, this is where we'd do it
   if (expandedFromPalettedMode) {
-    for (var i = 0; i < numPixels; i++) {
-      // palette
-      pixelsRGBA[i * 4 + 0] = screenBufferView[i * 4 + 0];
-      pixelsRGBA[i * 4 + 1] = screenBufferView[i * 4 + 1];
-      pixelsRGBA[i * 4 + 2] = screenBufferView[i * 4 + 2];
-      pixelsRGBA[i * 4 + 3] = 255; // full opacity
-    }
+    // palette expanded mode is already in RGBA order
+    pixelsRGBA.set(screenBufferView);
   } else {
-    for (var i = 0; i < numPixels; i++) {
-      // ARGB
-      pixelsRGBA[i * 4 + 0] = screenBufferView[i * 4 + 1];
-      pixelsRGBA[i * 4 + 1] = screenBufferView[i * 4 + 2];
-      pixelsRGBA[i * 4 + 2] = screenBufferView[i * 4 + 3];
-      pixelsRGBA[i * 4 + 3] = 255; // full opacity
+    // offset by 1 to go from ARGB to RGBA (we don't actually care about the
+    // alpha, it should be the same for all pixels)
+    pixelsRGBA.set(screenBufferView.subarray(1, screenBufferView.byteLength - 1));
+    // However, the alpha ends up being 0, which makes it transparent, so we
+    // need to override it to 255.
+    // TODO(mihai): do this on the native side, perhaps with a custom blit
+    // function.
+    const maxAlphaIndex = SCREEN_WIDTH * SCREEN_HEIGHT * 4 + 3;
+    for (let alphaIndex = 3; alphaIndex < maxAlphaIndex; alphaIndex += 4) {
+      pixelsRGBA[alphaIndex] = 0xff;
     }
-  }
+}
 
   canvasCtx.putImageData(imageData, 0, 0);
 }
