@@ -1,3 +1,6 @@
+let lastBlitFrameId = 0;
+let nextExpectedBlitTime = 0;
+let lastIdleWaitFrameId = 0;
 var INSTRUMENT_MALLOC = false;
 var memAllocSet = new Set();
 var memAllocSetPersistent = new Set();
@@ -243,6 +246,7 @@ function startEmulator(parentConfig) {
     },
 
     blit: function blit(bufPtr, width, height, depth, usingPalette) {
+      lastBlitFrameId++;
       videoModeBufferView[0] = width;
       videoModeBufferView[1] = height;
       videoModeBufferView[2] = depth;
@@ -251,6 +255,7 @@ function startEmulator(parentConfig) {
       for (var i = 0; i < length; i++) {
         screenBufferView[i] = Module.HEAPU8[bufPtr + i];
       }
+      nextExpectedBlitTime = performance.now() + 16;
     },
 
     openAudio: function openAudio(
@@ -306,13 +311,21 @@ function startEmulator(parentConfig) {
     },
 
     idleWait: function() {
+      // Don't do more than one call per frame, otherwise we end up skipping
+      // frames.
+      // TOOD: understand why IdleWait is called multiple times in a row
+      // before VideoRefresh is called again.
+      if (lastIdleWaitFrameId === lastBlitFrameId) {
+        return;
+      }
+      lastIdleWaitFrameId = lastBlitFrameId;
       Atomics.wait(
           inputBufferView,
           InputBufferAddresses.globalLockAddr,
           LockStates.READY_FOR_UI_THREAD,
-          // Time out after 8 milliseconds to make sure that we don't miss
-          // any frames if there are animations on the screen.
-          8);
+          // Time out such that we don't miss any frames (giving 3 milliseconds
+          // for blit and any CPU emulation to run).
+          nextExpectedBlitTime - performance.now() - 3);
     },
 
     acquireInputLock: acquireInputLock,
