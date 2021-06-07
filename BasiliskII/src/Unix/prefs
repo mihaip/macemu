@@ -10,7 +10,7 @@ rom Quadra-650.rom
 bootdrive 0
 bootdriver 0
 ramsize 268435456
-frameskip 1
+frameskip 0
 modelid 14
 cpu 4
 fpu true
