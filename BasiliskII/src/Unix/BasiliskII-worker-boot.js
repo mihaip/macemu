@@ -1,4 +1,5 @@
 let lastBlitFrameId = 0;
+let lastBlitFrameHash = 0;
 let nextExpectedBlitTime = 0;
 let lastIdleWaitFrameId = 0;
 var INSTRUMENT_MALLOC = false;
@@ -243,16 +244,19 @@ function startEmulator(parentConfig) {
       );
     },
 
-    blit: function blit(bufPtr, width, height, depth, usingPalette) {
+    blit: function blit(bufPtr, width, height, depth, usingPalette, hash) {
       lastBlitFrameId++;
       videoModeBufferView[0] = width;
       videoModeBufferView[1] = height;
       videoModeBufferView[2] = depth;
       videoModeBufferView[3] = usingPalette;
       var length = width * height * (depth === 32 ? 4 : 1); // 32bpp or 8bpp
-      screenBufferView.set(Module.HEAPU8.subarray(bufPtr, bufPtr + length));
+      if (hash !== lastBlitFrameHash) {
+        lastBlitFrameHash = hash;
+        screenBufferView.set(Module.HEAPU8.subarray(bufPtr, bufPtr + length));
+        postMessage({type: 'emulator_blit'});
+      }
       nextExpectedBlitTime = performance.now() + 16;
-      postMessage({type: 'emulator_blit'});
     },
 
     openAudio: function openAudio(
