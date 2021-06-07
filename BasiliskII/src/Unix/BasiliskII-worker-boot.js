@@ -320,9 +320,9 @@ function startEmulator(parentConfig) {
           inputBufferView,
           InputBufferAddresses.globalLockAddr,
           LockStates.READY_FOR_UI_THREAD,
-          // Time out such that we don't miss any frames (giving 3 milliseconds
+          // Time out such that we don't miss any frames (giving 2 milliseconds
           // for blit and any CPU emulation to run).
-          nextExpectedBlitTime - performance.now() - 3);
+          nextExpectedBlitTime - performance.now() - 2);
     },
 
     acquireInputLock: acquireInputLock,
