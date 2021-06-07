@@ -2485,7 +2485,8 @@ static void update_display_static_bbox(driver_base *drv)
 			Screen_blit((uint8 *)browser_pixels, the_buffer, size_to_copy);
 			blit_buffer = browser_pixels;
 		}
-		uint64 hash = SpookyHash::Hash64(blit_buffer, size_to_copy, 0);
+		uint64 hash = SpookyHash::Hash64(
+			blit_buffer, VIDEO_MODE_X * VIDEO_MODE_Y * 4, 0);
 		// Can't send the uin64 as is to JS, but we can turn it into a double
 		// (since all we care about are changes from one frame to the next).
 		double hash_double = *reinterpret_cast<double*>(&hash);
