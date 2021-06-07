@@ -252,6 +252,7 @@ function startEmulator(parentConfig) {
       var length = width * height * (depth === 32 ? 4 : 1); // 32bpp or 8bpp
       screenBufferView.set(Module.HEAPU8.subarray(bufPtr, bufPtr + length));
       nextExpectedBlitTime = performance.now() + 16;
+      postMessage({type: 'emulator_blit'});
     },
 
     openAudio: function openAudio(

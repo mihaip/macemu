@@ -350,20 +350,24 @@ function tryToSendInput() {
   releaseInputLock();
   inputQueue = remainingKeyEvents;
 }
+function handleInput(inputEvent) {
+  inputQueue.push(inputEvent);
+  tryToSendInput();
+}
 canvas.addEventListener('mousemove', function (event) {
-  inputQueue.push({type: 'mousemove', dx: event.offsetX, dy: event.offsetY});
+  handleInput({type: 'mousemove', dx: event.offsetX, dy: event.offsetY});
 });
 canvas.addEventListener('mousedown', function (event) {
-  inputQueue.push({type: 'mousedown'});
+  handleInput({type: 'mousedown'});
 });
 canvas.addEventListener('mouseup', function (event) {
-  inputQueue.push({type: 'mouseup'});
+  handleInput({type: 'mouseup'});
 });
 window.addEventListener('keydown', function (event) {
-  inputQueue.push({type: 'keydown', keyCode: event.keyCode});
+  handleInput({type: 'keydown', keyCode: event.keyCode});
 });
 window.addEventListener('keyup', function (event) {
-  inputQueue.push({type: 'keyup', keyCode: event.keyCode});
+  handleInput({type: 'keyup', keyCode: event.keyCode});
 });
 
 var workerConfig = Object.assign(
@@ -409,11 +413,16 @@ if (basiliskConfig.singleThreadedEmscripten) {
           progressElement.hidden = true;
         }
       }
+    } else if (e.data.type === 'emulator_blit') {
+      drawScreen();
     }
   };
 }
 
 function drawScreen() {
+  if (document.hidden) {
+    return;
+  }
   const pixelsRGBA = imageData.data;
   const expandedFromPalettedMode = videoModeBufferView[3];
   const start = audioContext.currentTime;
@@ -438,14 +447,9 @@ function drawScreen() {
   canvasCtx.putImageData(imageData, 0, 0);
 }
 
-function asyncLoop() {
-  drawScreen();
-  tryToSendInput();
-  requestAnimationFrame(asyncLoop);
-}
+document.addEventListener('visibilitychange', drawScreen);
 
 openAudio();
-asyncLoop();
 
 if (!basiliskConfig.singleThreadedEmscripten) {
   document.write(
