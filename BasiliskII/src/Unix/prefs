@@ -1,4 +1,4 @@
-disk MacOS753
+disk MacOS753.img
 disk Games.img
 extfs /
 screen win/800/600
