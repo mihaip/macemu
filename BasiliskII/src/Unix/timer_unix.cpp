@@ -378,7 +378,7 @@ void idle_wait(void)
 #else
 #ifdef EMSCRIPTEN
 	EM_ASM({
-		Module.idleWait();
+		workerApi.idleWait();
 	});
 #else
 	// Fallback: sleep 10 ms

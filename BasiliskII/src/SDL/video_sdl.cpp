@@ -734,7 +734,7 @@ driver_base::~driver_base()
 		// printf("~driver_base freeing %p\n", (void *)browser_pixels);
 		// #ifdef EMSCRIPTEN
 		// EM_ASM_({
-	 //  	Module.debugPointer($0);
+	 //  	workerApi.debugPointer($0);
 		// }, browser_pixels);
 		// #endif
 		// free_browser_pixels(browser_pixels);
@@ -856,7 +856,7 @@ driver_window::driver_window(SDL_monitor_desc &m)
 		printf("driver_window allocated browser_pixels=%p\n", (void *)browser_pixels);
 		#ifdef EMSCRIPTEN
 		EM_ASM_({
-	  	Module.debugPointer($0);
+	  	workerApi.debugPointer($0);
 		}, browser_pixels);
 		#endif
 	}
@@ -2189,11 +2189,11 @@ static int sdl_fake_kc_decode(int kc)
 static void sdl_fake_read_input() {
 	#ifdef EMSCRIPTEN
 	int lock = EM_ASM_INT_V({
-			return Module.acquireInputLock();
+			return workerApi.acquireInputLock();
 		});
 	if (lock) {
 		int mouse_button_state = EM_ASM_INT_V({
-			return Module.getInputValue(Module.InputBufferAddresses.mouseButtonStateAddr);
+			return workerApi.getInputValue(workerApi.InputBufferAddresses.mouseButtonStateAddr);
 		});
 
 		if (mouse_button_state > -1) {
@@ -2205,15 +2205,15 @@ static void sdl_fake_read_input() {
 		}
 
 		int has_mouse_move = EM_ASM_INT_V({
-			return Module.getInputValue(Module.InputBufferAddresses.mouseMoveFlagAddr);
+			return workerApi.getInputValue(workerApi.InputBufferAddresses.mouseMoveFlagAddr);
 		});
 		if (has_mouse_move) {
 			int dx = EM_ASM_INT_V({
-				return Module.getInputValue(Module.InputBufferAddresses.mouseMoveXDeltaAddr);
+				return workerApi.getInputValue(workerApi.InputBufferAddresses.mouseMoveXDeltaAddr);
 			});
 
 			int dy = EM_ASM_INT_V({
-				return Module.getInputValue(Module.InputBufferAddresses.mouseMoveYDeltaAddr);
+				return workerApi.getInputValue(workerApi.InputBufferAddresses.mouseMoveYDeltaAddr);
 			});
 
 			// printf("mousemove %d %d\n", dx, dy);
@@ -2225,15 +2225,15 @@ static void sdl_fake_read_input() {
 		}
 
 		int has_key_event = EM_ASM_INT_V({
-			return Module.getInputValue(Module.InputBufferAddresses.keyEventFlagAddr);
+			return workerApi.getInputValue(workerApi.InputBufferAddresses.keyEventFlagAddr);
 		});
 		if (has_key_event) {
 			int keycode = EM_ASM_INT_V({
-				return Module.getInputValue(Module.InputBufferAddresses.keyCodeAddr);
+				return workerApi.getInputValue(workerApi.InputBufferAddresses.keyCodeAddr);
 			});
 
 			int keystate = EM_ASM_INT_V({
-				return Module.getInputValue(Module.InputBufferAddresses.keyStateAddr);
+				return workerApi.getInputValue(workerApi.InputBufferAddresses.keyStateAddr);
 			});
 
 			// printf("keyevent %d %d\n", keycode, keystate);
@@ -2247,7 +2247,7 @@ static void sdl_fake_read_input() {
 		}
 
 		EM_ASM({
-			Module.releaseInputLock();
+			workerApi.releaseInputLock();
 		});
 	}
 	#endif
@@ -2474,7 +2474,7 @@ static void update_display_static_bbox(driver_base *drv)
 #if DEBUG
 		printf("Screen_blit from the_buffer=%p to browser_pixels=%p of size=%u depth=%d\n",(void *)the_buffer, (void *)browser_pixels, size_to_copy, VIDEO_MODE_DEPTH);
 		EM_ASM_({
-	  	Module.summarizeBuffer($0, $1, $2, $3);
+	  	workerApi.summarizeBuffer($0, $1, $2, $3);
 		}, the_buffer, VIDEO_MODE_X, VIDEO_MODE_Y, 32);
 		assert(browser_pixels);
 #endif
@@ -2491,13 +2491,13 @@ static void update_display_static_bbox(driver_base *drv)
 		// (since all we care about are changes from one frame to the next).
 		double hash_double = *reinterpret_cast<double*>(&hash);
 		EM_ASM_({
-		Module.blit($0, $1, $2, $3, $4, $5);
+		workerApi.blit($0, $1, $2, $3, $4, $5);
 		}, blit_buffer, VIDEO_MODE_X, VIDEO_MODE_Y, 32, !IsDirectMode(mode), hash_double);
 	} else {
 		uint8 *pixels = (uint8 *)alloca(sizeof(uint8) * size_to_copy);
 		Screen_blit((uint8 *)pixels, the_buffer, size_to_copy);
 		EM_ASM_({
-	  	Module.blit($0, $1, $2, $3, $4);
+	  	workerApi.blit($0, $1, $2, $3, $4);
 		}, pixels, VIDEO_MODE_X, VIDEO_MODE_Y, 32, !IsDirectMode(mode));
 	}
 	#endif

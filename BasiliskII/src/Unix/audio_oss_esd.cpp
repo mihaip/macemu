@@ -223,7 +223,7 @@ static bool open_js(void)
 #if defined(EMSCRIPTEN) && !defined(__EMSCRIPTEN_PTHREADS__)
 	EM_ASM_({
 
-  	Module.openAudio($0, $1, $2, $3);
+  	workerApi.openAudio($0, $1, $2, $3);
 
 	}, opt_sr, opt_ss, opt_ch, audio_frames_per_block);
 #endif
@@ -470,7 +470,7 @@ void audio_write_blocks(int blocks_to_write)
 		// printf("audio_write_blocks early return\n");
 		return;
 	}
-	
+
 	int failed_to_write = false;
 	size_t bytes_written = 0;
 	int blocks_written = 0;
@@ -614,7 +614,7 @@ static ssize_t audio_write(int audio_fd, const void *buf, size_t buf_nbytes) {
 	#ifdef BROWSER_AUDIO
 		#ifdef EMSCRIPTEN
 			return EM_ASM_INT({
-				return Module.enqueueAudio($0, $1, $2);
+				return workerApi.enqueueAudio($0, $1, $2);
 			}, buf, buf_nbytes, audio_fd);
 		#endif
 
