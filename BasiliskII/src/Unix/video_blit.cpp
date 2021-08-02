@@ -56,7 +56,7 @@ static void Blit_Copy_Raw(uint8 * dest, const uint8 * source, uint32 length)
 
 #define FB_BLIT_1(dst, src) \
 	(dst = (((src) >> 8) & 0xff) | (((src) & 0xff) << 8))
-	
+
 #define FB_BLIT_2(dst, src) \
 	(dst = (((src) >> 8) & 0x00ff00ff) | (((src) & 0x00ff00ff) << 8))
 
@@ -192,7 +192,7 @@ static void Blit_Copy_Raw(uint8 * dest, const uint8 * source, uint32 length)
 
 #define FB_BLIT_1(dst, src) \
 	(dst = (((src) >> 8) & 0x001f) | (((src) << 9) & 0xfe00) | (((src) >> 7) & 0x01c0))
-	
+
 #define FB_BLIT_2(dst, src) \
 	(dst = (((src) >> 8) & 0x001f001f) | (((src) << 9) & 0xfe00fe00) | (((src) >> 7) & 0x01c001c0))
 
@@ -401,14 +401,14 @@ static void Blit_Expand_1_To_32(uint8 * dest, const uint8 * p, uint32 length)
 	uint32 *q = (uint32 *)dest;
 	for (uint32 i=0; i<length; i++) {
 		uint8 c = *p++;
-		*q++ = -(c >> 7);
-		*q++ = -((c >> 6) & 1);
-		*q++ = -((c >> 5) & 1);
-		*q++ = -((c >> 4) & 1);
-		*q++ = -((c >> 3) & 1);
-		*q++ = -((c >> 2) & 1);
-		*q++ = -((c >> 1) & 1);
-		*q++ = -(c & 1);
+		*q++ = ExpandMap[c >> 7];
+		*q++ = ExpandMap[(c >> 6) & 1];
+		*q++ = ExpandMap[(c >> 5) & 1];
+		*q++ = ExpandMap[(c >> 4) & 1];
+		*q++ = ExpandMap[(c >> 3) & 1];
+		*q++ = ExpandMap[(c >> 2) & 1];
+		*q++ = ExpandMap[(c >> 1) & 1];
+		*q++ = ExpandMap[c & 1];
 	}
 }
 
@@ -493,13 +493,12 @@ static Screen_blit_func_info Screen_blitters[] = {
 // --> In that case, VOSF is not necessary
 bool Screen_blitter_init(VisualFormat const & visual_format, bool native_byte_order, int mac_depth)
 {
-printf("Screen_blitter_init\n");	
 #if USE_SDL_VIDEO
 	const bool use_sdl_video = true;
 #else
 	const bool use_sdl_video = false;
 #endif
-#if REAL_ADDRESSING || DIRECT_ADDRESSING
+#if REAL_ADDRESSING || DIRECT_ADDRESSING || EMSCRIPTEN
 	if (mac_depth == 1 && !use_sdl_video && !visual_format.fullscreen) {
 
 		// Windowed 1-bit mode uses a 1-bit X image, so there's no need for special blitting routines
@@ -555,7 +554,7 @@ printf("Screen_blitter_init\n");
 			break;
 		}
 		bool blitter_found = (Screen_blit != NULL);
-	
+
 		// Search for an adequate blit function
 		const int blitters_count = sizeof(Screen_blitters)/sizeof(Screen_blitters[0]);
 		for (int i = 0; !blitter_found && (i < blitters_count); i++) {
@@ -572,7 +571,7 @@ printf("Screen_blitter_init\n");
 							;
 			}
 		}
-	
+
 		// No appropriate blitter found, dump RGB mask values and abort()
 		if (!blitter_found) {
 			fprintf(stderr, "### No appropriate blitter found\n");
@@ -589,12 +588,6 @@ printf("Screen_blitter_init\n");
 	Screen_blit = Blit_Copy_Raw;
 #endif
 
-	printf("depth=%d mac_depth=%d\n", visual_format.depth, mac_depth);
-	if (visual_format.depth == 32 && mac_depth == 8) {
-		printf("switching to Blit_Expand_8_To_32\n");
-		Screen_blit = Blit_Expand_8_To_32;
-	}
-	
 	// If the blitter simply reduces to a copy, we don't need VOSF in DGA mode
 	// --> In that case, we return FALSE
 	return (Screen_blit != Blit_Copy_Raw);

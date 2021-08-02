@@ -846,8 +846,7 @@ driver_window::driver_window(SDL_monitor_desc &m)
 #endif
 
 	if (REUSE_VIDEO_BUFFER) {
-		const int bytes_per_pixel = VIDEO_MODE_ROW_BYTES / VIDEO_MODE_X;
-		uint32 size_to_copy = VIDEO_MODE_X * bytes_per_pixel * VIDEO_MODE_Y;
+		uint32 size_to_copy = VIDEO_MODE_ROW_BYTES * VIDEO_MODE_Y;
 
 		// printf("driver_window checking browser_pixels %p != %p \n", (void *)browser_pixels, (void *)NULL);
 		// assert(browser_pixels == NULL);
@@ -922,12 +921,19 @@ driver_window::driver_window(SDL_monitor_desc &m)
 	#endif
 
 	// Init blitting routines
-	SDL_PixelFormat *f = s->format;
 	VisualFormat visualFormat;
 	visualFormat.depth = depth;
+#if EMSCRIPTEN
+	// Magic values to force a Blit_Copy_Raw in 32-bit mode.
+	visualFormat.Rmask = 0xff00;
+	visualFormat.Gmask = 0xff0000;
+	visualFormat.Bmask = 0xff000000;
+#else
+	SDL_PixelFormat *f = s->format;
 	visualFormat.Rmask = f->Rmask;
 	visualFormat.Gmask = f->Gmask;
 	visualFormat.Bmask = f->Bmask;
+#endif
 	is_raw_screen_blit = !Screen_blitter_init(visualFormat, true, mac_depth_of_video_depth(VIDEO_MODE_DEPTH));
 
 	// Load gray ramp to 8->16/32 expand map
@@ -2433,9 +2439,8 @@ static void update_display_static_bbox(driver_base *drv)
 #ifdef EMSCRIPTEN_SAB
 	// Update the surface from Mac screen
 	const int bytes_per_row = VIDEO_MODE_ROW_BYTES;
-	const int bytes_per_pixel = bytes_per_row / VIDEO_MODE_X;
 	const int dst_bytes_per_row = drv->s->pitch;
-	uint32 size_to_copy = VIDEO_MODE_X * bytes_per_pixel * VIDEO_MODE_Y;
+	uint32 size_to_copy = VIDEO_MODE_ROW_BYTES * VIDEO_MODE_Y;
 
 	// int x, y;
 	// for (y = 0; y < VIDEO_MODE_Y; y += VIDEO_MODE_Y) {
@@ -2680,7 +2685,7 @@ static void video_refresh_window_static(void)
 	if (++tick_counter >= frame_skip) {
 		tick_counter = 0;
 		const VIDEO_MODE &mode = drv->mode;
-		if ((int)VIDEO_MODE_DEPTH >= VIDEO_DEPTH_8BIT)
+		if ((int)VIDEO_MODE_DEPTH >= VIDEO_DEPTH_8BIT || EMSCRIPTEN)
 			update_display_static_bbox(drv);
 		else
 			update_display_static(drv);
