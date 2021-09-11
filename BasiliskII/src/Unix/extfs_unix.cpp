@@ -29,6 +29,7 @@
 #include "sysdeps.h"
 #include "extfs.h"
 #include "extfs_defs.h"
+#include "macroman.h"
 
 #define DEBUG 0
 #include "debug.h"
@@ -282,7 +283,7 @@ uint32 get_rfork_size(const char *path)
 
 	// Get size
 	off_t size = lseek(fd, 0, SEEK_END);
-	
+
 	// Close file and return size
 	close(fd);
 	return size < 0 ? 0 : size;
@@ -380,11 +381,11 @@ bool extfs_rename(const char *old_path, const char *new_path)
 // Convert from the host OS filename encoding to MacRoman
 const char *host_encoding_to_macroman(const char *filename)
 {
-	return filename;
+	return utf8_to_macroman(filename);
 }
 
 // Convert from MacRoman to host OS filename encoding
 const char *macroman_to_host_encoding(const char *filename)
 {
-	return filename;
+	return macroman_to_utf8(filename);
 }

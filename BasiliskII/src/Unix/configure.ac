@@ -632,6 +632,7 @@ ETHERSRC=../dummy/ether_dummy.cpp
 SCSISRC=../dummy/scsi_dummy.cpp
 AUDIOSRC=../dummy/audio_dummy.cpp
 EXTFSSRC=extfs_unix.cpp
+MACROMANSRC=macroman.cpp
 EXTRASYSSRCS=
 CAN_NATIVE_M68K=no
 
@@ -855,7 +856,7 @@ dnl SERIALSRC=../dummy/serial_dummy.cpp
 dnl ETHERSRC=../dummy/ether_dummy.cpp
 dnl AUDIOSRC=../dummy/audio_dummy.cpp
 dnl fi
-SYSSRCS="$VIDEOSRCS $EXTFSSRC $SERIALSRC $ETHERSRC $SCSISRC $AUDIOSRC $SEMSRC $UISRCS $MONSRCS $EXTRASYSSRCS"
+SYSSRCS="$VIDEOSRCS $EXTFSSRC $MACROMANSRC $SERIALSRC $ETHERSRC $SCSISRC $AUDIOSRC $SEMSRC $UISRCS $MONSRCS $EXTRASYSSRCS"
 
 dnl Define a macro that translates a yesno-variable into a C macro definition
 dnl to be put into the config.h file
