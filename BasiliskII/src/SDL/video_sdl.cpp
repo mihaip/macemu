@@ -2685,10 +2685,14 @@ static void video_refresh_window_static(void)
 	if (++tick_counter >= frame_skip) {
 		tick_counter = 0;
 		const VIDEO_MODE &mode = drv->mode;
-		if ((int)VIDEO_MODE_DEPTH >= VIDEO_DEPTH_8BIT || EMSCRIPTEN)
+#if EMSCRIPTEN
+		update_display_static_bbox(drv);
+#else
+		if ((int)VIDEO_MODE_DEPTH >= VIDEO_DEPTH_8BIT)
 			update_display_static_bbox(drv);
 		else
 			update_display_static(drv);
+#endif
 	}
 }
 
