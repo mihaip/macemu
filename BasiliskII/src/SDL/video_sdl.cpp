@@ -2059,139 +2059,6 @@ static void handle_events(void)
 	#endif
 }
 
-
-static int sdl_fake_kc_decode(int kc)
-{
-	switch (kc) {
-	case 65: return 0x00;
-	case 66: return 0x0b;
-	case 67: return 0x08;
-	case 68: return 0x02;
-	case 69: return 0x0e;
-	case 70: return 0x03;
-	case 71: return 0x05;
-	case 72: return 0x04;
-	case 73: return 0x22;
-	case 74: return 0x26;
-	case 75: return 0x28;
-	case 76: return 0x25;
-	case 77: return 0x2e;
-	case 78: return 0x2d;
-	case 79: return 0x1f;
-	case 80: return 0x23;
-	case 81: return 0x0c;
-	case 82: return 0x0f;
-	case 83: return 0x01;
-	case 84: return 0x11;
-	case 85: return 0x20;
-	case 86: return 0x09;
-	case 87: return 0x0d;
-	case 88: return 0x07;
-	case 89: return 0x10;
-	case 90: return 0x06;
-
-	case 49: /*case SDLK_EXCLAIM:*/ return 0x12;
-	case 50: /*case SDLK_AT:*/ return 0x13;
-	case 51: /*case SDLK_HASH:*/ return 0x14;
-	case 52: /*case SDLK_DOLLAR:*/ return 0x15;
-	case 53: return 0x17;
-	case 54: return 0x16;
-	case 55: return 0x1a;
-	case 56: return 0x1c;
-	case 57: return 0x19;
-	case 48: return 0x1d;
-
-	case 192: return 0x0a;
-	case 189: /*case SDLK_UNDERSCORE:*/ return 0x1b;
-	case 187: /*case SDLK_PLUS:*/ return 0x18;
-	case 219: return 0x21;
-	case 221: return 0x1e;
-	case 220: return 0x2a;
-	case 186: /*case SDLK_COLON:*/ return 0x29;
-	case 222: /*case SDLK_QUOTEDBL:*/ return 0x27;
-	case 188: /*case SDLK_LESS:*/ return 0x2b;
-	case 190: /*case SDLK_GREATER:*/ return 0x2f;
-	case 191: /*case SDLK_QUESTION:*/ return 0x2c;
-
-	case 9: return 0x30;
-	case 13: return 0x24;
-	case 32: return 0x31;
-	case 8: return 0x33;
-
-	// case SDLK_DELETE: return 0x75;
-	// case SDLK_INSERT: return 0x72;
-	// case SDLK_HOME: case SDLK_HELP: return 0x73;
-	// case SDLK_END: return 0x77;
-	// case SDLK_PAGEUP: return 0x74;
-	// case SDLK_PAGEDOWN: return 0x79;
-
-	case 17: return 0x36;
-	// case SDLK_RCTRL: return 0x36;
-	case 16: return 0x38;
-	// case SDLK_RSHIFT: return 0x38;
-// if mac
-	case 18: return 0x3a;
-	// case SDLK_RALT: return 0x3a;
-	case 91: return 0x37;
-	case 93: return 0x37;
-// else
-	// case SDLK_LALT: return 0x37;
-	// case SDLK_RALT: return 0x37;
-	// case SDLK_LMETA: return 0x3a;
-	// case SDLK_RMETA: return 0x3a;
-// endif
-	// case SDLK_LSUPER: return 0x3a; // "Windows" key
-	// case SDLK_RSUPER: return 0x3a;
-	// case SDLK_MENU: return 0x32;
-	// case SDLK_CAPSLOCK: return 0x39;
-	// case SDLK_NUMLOCK: return 0x47;
-
-	case 38: return 0x3e;
-	case 40: return 0x3d;
-	case 37: return 0x3b;
-	case 39: return 0x3c;
-
-	case 27:  return 0x35;
-
-	// case SDLK_F1: return 0x7a;
-	// case SDLK_F2: return 0x78;
-	// case SDLK_F3: return 0x63;
-	// case SDLK_F4: return 0x76;
-	// case SDLK_F5: return 0x60;
-	// case SDLK_F6: return 0x61;
-	// case SDLK_F7: return 0x62;
-	// case SDLK_F8: return 0x64;
-	// case SDLK_F9: return 0x65;
-	// case SDLK_F10: return 0x6d;
-	// case SDLK_F11: return 0x67;
-	// case SDLK_F12: return 0x6f;
-
-	// case SDLK_PRINT: return 0x69;
-	// case SDLK_SCROLLOCK: return 0x6b;
-	// case SDLK_PAUSE: return 0x71;
-
-	// case SDLK_KP0: return 0x52;
-	// case SDLK_KP1: return 0x53;
-	// case SDLK_KP2: return 0x54;
-	// case SDLK_KP3: return 0x55;
-	// case SDLK_KP4: return 0x56;
-	// case SDLK_KP5: return 0x57;
-	// case SDLK_KP6: return 0x58;
-	// case SDLK_KP7: return 0x59;
-	// case SDLK_KP8: return 0x5b;
-	// case SDLK_KP9: return 0x5c;
-	// case SDLK_KP_PERIOD: return 0x41;
-	// case SDLK_KP_PLUS: return 0x45;
-	// case SDLK_KP_MINUS: return 0x4e;
-	// case SDLK_KP_MULTIPLY: return 0x43;
-	// case SDLK_KP_DIVIDE: return 0x4b;
-	// case SDLK_KP_ENTER: return 0x4c;
-	// case SDLK_KP_EQUALS: return 0x51;
-	}
-	printf("Unhandled keycode: %d\n", kc);
-	return -1;
-}
-
 static void sdl_fake_read_input() {
 	#ifdef EMSCRIPTEN
 	int lock = EM_ASM_INT_V({
@@ -2242,12 +2109,10 @@ static void sdl_fake_read_input() {
 				return workerApi.getInputValue(workerApi.InputBufferAddresses.keyStateAddr);
 			});
 
-			// printf("keyevent %d %d\n", keycode, keystate);
-			int adbkeycode = sdl_fake_kc_decode(keycode);
 			if (keystate == 0) {
-				ADBKeyUp(adbkeycode);
+				ADBKeyUp(keycode);
 			} else {
-				ADBKeyDown(adbkeycode);
+				ADBKeyDown(keycode);
 			}
 
 		}
