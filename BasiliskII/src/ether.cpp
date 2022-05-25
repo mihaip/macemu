@@ -192,24 +192,6 @@ void EtherReset(void)
 	ether_reset();
 }
 
-
-/*
- *  Check whether Ethernet address is AppleTalk or Ethernet broadcast address
- */
-
-static inline bool is_apple_talk_broadcast(uint8 *p)
-{
-	return p[0] == 0x09 && p[1] == 0x00 && p[2] == 0x07
-	    && p[3] == 0xff && p[4] == 0xff && p[5] == 0xff;
-}
-
-static inline bool is_ethernet_broadcast(uint8 *p)
-{
-	return p[0] == 0xff && p[1] == 0xff && p[2] == 0xff
-	    && p[3] == 0xff && p[4] == 0xff && p[5] == 0xff;
-}
-
-
 /*
  *  Driver Open() routine
  */
@@ -225,7 +207,7 @@ int16 EtherOpen(uint32 pb, uint32 dce)
 	if (r.a[0] == 0)
 		return openErr;
 	ether_data = r.a[0];
-	D(bug(" data %08x\n", ether_data));
+	D(bug(" ether_data %08x\n", ether_data));
 
 	WriteMacInt16(ether_data + ed_DeferredTask + qType, dtQType);
 	WriteMacInt32(ether_data + ed_DeferredTask + dtAddr, ether_data + ed_Code);
