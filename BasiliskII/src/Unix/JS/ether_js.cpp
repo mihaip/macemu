@@ -133,7 +133,11 @@ int16 ether_write(uint32 wds) {
   char dest_ether_addr_str[18];
   if (len >= 6 && packet[0] == GENERATED_ETHER_ADDR_PREFIX) {
     ether_addr_to_str(packet, dest_ether_addr_str);
-  } else if (is_apple_talk_broadcast(packet) || is_ethernet_broadcast(packet)) {
+  } else if (is_apple_talk_broadcast(packet)) {
+    dest_ether_addr_str[0] = 'A';
+    dest_ether_addr_str[1] = 'T';
+    dest_ether_addr_str[2] = '\0';
+  } else if (is_ethernet_broadcast(packet)) {
     dest_ether_addr_str[0] = '*';
     dest_ether_addr_str[1] = '\0';
   } else {
