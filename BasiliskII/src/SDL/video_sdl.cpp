@@ -2114,7 +2114,13 @@ static void sdl_fake_read_input() {
 			} else {
 				ADBKeyDown(keycode);
 			}
-
+		}
+		int has_ethernet_interrupt = EM_ASM_INT_V({
+			return workerApi.getInputValue(workerApi.InputBufferAddresses.ethernetInterruptFlagAddr);
+		});
+		if (has_ethernet_interrupt) {
+			SetInterruptFlag(INTFLAG_ETHER);
+			TriggerInterrupt();
 		}
 
 		EM_ASM({

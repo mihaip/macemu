@@ -1265,8 +1265,9 @@ static void one_tick(...)
 	}
 #endif
 
-#ifndef HAVE_PTHREADS
-	// No threads available, perform networking from here
+#if !defined(HAVE_PTHREADS) && !defined(EMSCRIPTEN)
+	// No threads available, perform networking from here. We trigger Ethernet
+	// interrupts more directly with Emscripten.
 	SetInterruptFlag(INTFLAG_ETHER);
 #endif
 
