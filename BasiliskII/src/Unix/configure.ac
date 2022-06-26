@@ -636,7 +636,7 @@ MACROMANSRC=macroman.cpp
 EXTRASYSSRCS=
 CAN_NATIVE_M68K=no
 
-if [[ -z "${macemujs_conf_native_os// }" ]]; then
+if [[ -z "${macemujs_conf_native// }" ]]; then
   ETHERSRC=JS/ether_js.cpp
 
   # echo "adding browser io"
@@ -654,7 +654,7 @@ else
   echo "target_os=$target_os"
 case "$target_os" in
 linux*)
-  ETHERSRC=ether_unix.cpp
+  ETHERSRC=ether_dummy.cpp
   AUDIOSRC=audio_oss_esd.cpp
   SCSISRC=Linux/scsi_linux.cpp
   ;;
