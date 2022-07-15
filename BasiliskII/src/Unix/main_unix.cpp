@@ -101,6 +101,7 @@ using std::string;
 
 #ifdef EMSCRIPTEN
 #include <emscripten.h>
+#include "JS/input_js.h"
 #endif
 
 
@@ -330,6 +331,10 @@ void cpu_do_check_ticks(void)
 {
 #if DEBUG
 	n_check_ticks++;
+#endif
+
+#ifdef EMSCRIPTEN
+	ReadJSInput();
 #endif
 
 	uint64 now;
