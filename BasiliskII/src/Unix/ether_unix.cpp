@@ -1,5 +1,3 @@
-#ifndef EMSCRIPTEN
-
 /*
  *  ether_unix.cpp - Ethernet device driver, Unix specific stuff (Linux and FreeBSD)
  *
@@ -391,9 +389,7 @@ bool ether_init(void)
 		ether_addr[5] = 0x56;
 #endif
 	} else {
-		#ifdef HAVE_NETWORK
 		ioctl(fd, SIOCGIFADDR, ether_addr);
-		#endif
 	}
 	D(bug("Ethernet address %02x %02x %02x %02x %02x %02x\n", ether_addr[0], ether_addr[1], ether_addr[2], ether_addr[3], ether_addr[4], ether_addr[5]));
 
@@ -1054,6 +1050,3 @@ static int slirp_add_redir(const char *redir_str)
 	WarningAlert(str);
 	return -1;
 }
-
-
-#endif

@@ -33,7 +33,6 @@
 #include "extfs.h"
 #include "prefs.h"
 #include "rom_patches.h"
-#include "memory.h"
 
 #define DEBUG 0
 #include "debug.h"
