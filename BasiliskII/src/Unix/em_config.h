@@ -30,3 +30,5 @@
 #undef HAVE_LIBPOSIX4
 #undef HAVE_LIBRT
 #undef HAVE_MMAP_VM
+// Disable assembly optimizations in the emulated CPU.
+#undef OPTIMIZED_FLAGS

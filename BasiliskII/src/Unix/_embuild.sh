@@ -1,20 +1,42 @@
 #!/bin/bash
 set -euo pipefail
 
-export macemujs_conf_worker=${macemujs_conf_worker:-}
-export macemujs_conf_mainthread=${macemujs_conf_mainthread:-}
-source ./_emenv.sh
+em_flags=""
+em_ldflags=""
 
-PLATFORM_FLAGS=""
-if [[ -n "${macemujs_conf_native:-}" ]]; then
-PLATFORM_FLAGS+=" --enable-sdl-audio"
+em_ldflags+=" -s INITIAL_MEMORY=536870912"
+em_ldflags+=" -s FORCE_FILESYSTEM=1"
+em_ldflags+=" -s WASM=1"
+
+em_defines=""
+if [[ -z "${macemujs_conf_debug:-}" ]]; then
+  em_flags+=" -O3 -gsource-map"
 else
-PLATFORM_FLAGS+=" --enable-emscripten"
+  em_flags+=" -O0 -gsource-map"
+  em_ldflags+=" -s ASSERTIONS=2 "
+  em_ldflags+=" -s DEMANGLE_SUPPORT=1"
+  em_defines+=" -DDEBUG"
 fi
 
-# env CFLAGS=$CFLAGS CPPFLAGS=$CPPFLAGS LDFLAGS=$LDFLAGS
-# CFLAGS="-g -fsanitize=address" CPPFLAGS="-g -fsanitize=address" LDFLAGS="-g -fsanitize=address" \
-
+platform_flags=""
+if [[ -n "${macemujs_conf_native:-}" ]]; then
+  echo "Building for native"
+  platform_flags+=" --enable-sdl-audio"
+  config_cache_file="/tmp/config.cache.native"
+else
+  echo "Building for emscripten"
+  export CC="emcc"
+  export CXX="em++"
+  export AR="emar"
+  export EMSCRIPTEN=1
+  export DEFINES=$em_defines
+  export CFLAGS="-I/opt/X11/include -Iem_config.h $em_flags -g"
+  export CPPFLAGS="-I/opt/X11/include $em_flags -g"
+  export LDFLAGS="-L/opt/X11/lib $em_flags $em_ldflags"
+  echo "with flags '$em_flags' and '$em_ldflags'"
+  platform_flags+=" --enable-emscripten"
+  config_cache_file="/tmp/config.cache.emscripten"
+fi
 
 ./autogen.sh \
   --without-esd \
@@ -26,27 +48,9 @@ fi
   --enable-addressing="banks" \
   --enable-sdl-video \
   --disable-vosf \
-  $PLATFORM_FLAGS
+  --cache-file=$config_cache_file \
+  $platform_flags
 
 if [[ -z "${macemujs_conf_native:-}" ]]; then
   cat ./em_config.h >> ./config.h
-  if [[ -z "$macemujs_conf_mainthread" ]]; then
-    echo "#define EMSCRIPTEN_SAB 1" >> ./config.h
-  else
-    echo "#define EMSCRIPTEN_MAINTHREAD 1" >> ./config.h
-  fi
-else
-  {
-    echo "#define USE_CPU_EMUL_SERVICES 1"
-    # echo "#undef __MACH__"
-    # echo "#undef __APPLE__"
-    echo "#undef AQUA"
-    echo "#undef HAVE_FRAMEWORK_COREFOUNDATION"
-    echo "#undef HAVE_MACH_EXCEPTIONS"
-    echo "#undef HAVE_LIBPOSIX4"
-    echo "#undef HAVE_LIBRT"
-    # echo "#undef HAVE_MACH_VM"
-    # echo "#undef HAVE_MMAP_VM"
-    # echo "#undef EMSCRIPTEN"
-  } >> ./config.h
 fi

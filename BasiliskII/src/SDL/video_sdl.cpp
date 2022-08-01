@@ -72,8 +72,6 @@
 #ifdef EMSCRIPTEN
 #include <emscripten.h>
 #include "SpookyV2.h"
-// #define EMSCRIPTEN_SAB 1
-// #define EMSCRIPTEN_EMTERPRET 1
 #endif
 // Supported video modes
 using std::vector;
@@ -728,21 +726,6 @@ driver_base::~driver_base()
 	if (s)
 		SDL_FreeSurface(s);
 
-	if (REUSE_VIDEO_BUFFER) {
-		// printf("~driver_base checking browser_pixels %p != %p \n", (void *)browser_pixels, (void *)NULL);
-		// assert(browser_pixels != NULL);
-		// printf("~driver_base freeing %p\n", (void *)browser_pixels);
-		// #ifdef EMSCRIPTEN
-		// EM_ASM_({
-	 //  	workerApi.debugPointer($0);
-		// }, browser_pixels);
-		// #endif
-		// free_browser_pixels(browser_pixels);
-		// browser_pixels = NULL;
-		// assert(browser_pixels == NULL);
-		// printf("~driver_base freed browser_pixels\n");
-	}
-
 	// the_buffer shall always be mapped through vm_acquire_framebuffer()
 	if (the_buffer != VM_MAP_FAILED) {
 		D(bug(" releasing the_buffer at %p (%d bytes)\n", the_buffer, the_buffer_size));
@@ -781,7 +764,7 @@ void driver_base::update_palette(void)
 {
 	const VIDEO_MODE &mode = monitor.get_current_mode();
 
-	#ifndef EMSCRIPTEN_SAB
+	#ifndef EMSCRIPTEN
 	if ((int)VIDEO_MODE_DEPTH <= VIDEO_DEPTH_8BIT)
 		SDL_SetPalette(s, SDL_PHYSPAL, sdl_palette, 0, 256);
 	#endif
@@ -838,7 +821,7 @@ driver_window::driver_window(SDL_monitor_desc &m)
 
 	// Create surface
 	int depth = sdl_depth_of_video_depth(VIDEO_MODE_DEPTH);
-#ifdef EMSCRIPTEN_SAB
+#ifdef EMSCRIPTEN
 	depth = 32; // always 32 is easier
 #else
 	if ((s = SDL_SetVideoMode(width, height, depth, SDL_HWSURFACE)) == NULL)
@@ -891,7 +874,7 @@ driver_window::driver_window(SDL_monitor_desc &m)
 	if (!use_vosf) {
 		printf("allocating the_buffer, the_buffer_copy\n");
 		// Allocate memory for frame buffer
-#if EMSCRIPTEN_SAB
+#if EMSCRIPTEN
 		the_buffer_size = (aligned_height + 2) * width * depth;
 #else
 		the_buffer_size = (aligned_height + 2) * s->pitch;
@@ -2227,9 +2210,6 @@ static void update_display_static(driver_base *drv)
 	#endif
 }
 
-static int emterpret_frame_count = 0;
-
-
 // Static display update (fixed frame rate, bounding boxes based)
 // XXX use NQD bounding boxes to help detect dirty areas?
 static void update_display_static_bbox(driver_base *drv)
@@ -2238,45 +2218,12 @@ static void update_display_static_bbox(driver_base *drv)
 	assert(Screen_blit);
 	const VIDEO_MODE &mode = drv->mode;
 
-#ifdef EMSCRIPTEN_SAB
+#ifdef EMSCRIPTEN
 	// Update the surface from Mac screen
 	const int bytes_per_row = VIDEO_MODE_ROW_BYTES;
 	const int dst_bytes_per_row = drv->s->pitch;
 	uint32 size_to_copy = VIDEO_MODE_ROW_BYTES * VIDEO_MODE_Y;
 
-	// int x, y;
-	// for (y = 0; y < VIDEO_MODE_Y; y += VIDEO_MODE_Y) {
-	// 	int h = VIDEO_MODE_Y;
-	// 	if (h > VIDEO_MODE_Y - y)
-	// 		h = VIDEO_MODE_Y - y;
-	// 	for (x = 0; x < VIDEO_MODE_X; x += VIDEO_MODE_X) {
-	// 		int w = VIDEO_MODE_X;
-	// 		if (w > VIDEO_MODE_X - x)
-	// 			w = VIDEO_MODE_X - x;
-	// 		const int xs = w * bytes_per_pixel;
-	// 		const int xb = x * bytes_per_pixel;
-	// 		for (int j = y; j < (y + h); j++) {
-	// 			const int yb = j * bytes_per_row;
-	// 			const int dst_yb = j * dst_bytes_per_row;
-	// 			memcmp(&the_buffer[yb + xb], &the_buffer_copy[yb + xb], xs);
-	// 			memcpy(&the_buffer_copy[yb + xb], &the_buffer[yb + xb], xs);
-	// 			Screen_blit((uint8 *)pixels + dst_yb + xb, the_buffer + yb + xb, xs);
-	// 		}
-	// 	}
-	// }
-
-	// TODO: this will do nothing inside EMSCRIPTEN_SAB block
-  #ifdef EMSCRIPTEN_MAINTHREAD
-  	emterpret_frame_count++;
-
-  	if (emterpret_frame_count % 60 == 0) {
-			EM_ASM_({
-				console.log("frames rendered", $0);
-			}, emterpret_frame_count);
-  	}
-  	#error "should be unreachable"
-    emscripten_sleep(1);
-  #else
 	if (REUSE_VIDEO_BUFFER) {
 #if DEBUG
 		printf("Screen_blit from the_buffer=%p to browser_pixels=%p of size=%u depth=%d\n",(void *)the_buffer, (void *)browser_pixels, size_to_copy, VIDEO_MODE_DEPTH);
@@ -2307,7 +2254,6 @@ static void update_display_static_bbox(driver_base *drv)
 	  	workerApi.blit($0, $1, $2, $3, $4);
 		}, pixels, VIDEO_MODE_X, VIDEO_MODE_Y, 32, !IsDirectMode(mode));
 	}
-	#endif
 #else
 	// Allocate bounding boxes for SDL_UpdateRects()
 	const int N_PIXELS = 64;
@@ -2372,19 +2318,6 @@ static void update_display_static_bbox(driver_base *drv)
 	if (nr_boxes)
 		SDL_UpdateRects(drv->s, nr_boxes, boxes);
 
-
-  #ifdef EMSCRIPTEN_EMTERPRET
-  	emterpret_frame_count++;
-
-  	if (emterpret_frame_count % 60 == 0) {
-			EM_ASM_({
-				console.log("frames rendered", $0);
-			}, emterpret_frame_count);
-  	}
-
-  	#error "should be unreachable"
-    emscripten_sleep(1);
-  #endif
 #endif
 }
 
@@ -2526,11 +2459,7 @@ static void VideoRefreshInit(void)
 
 static inline void do_video_refresh(void)
 {
-	#ifdef EMSCRIPTEN
-		#ifdef EMSCRIPTEN_MAINTHREAD
-			// TODO implement event handling for mainthread
-		#endif
-	#else
+	#ifndef EMSCRIPTEN
 	// Handle SDL events
 	handle_events();
 	#endif

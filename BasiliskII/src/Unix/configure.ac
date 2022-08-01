@@ -95,7 +95,6 @@ AC_CANONICAL_TARGET
 
 
 AC_ARG_VAR(macemujs_conf_native, compile for native target)
-AC_ARG_VAR(macemujs_conf_cpu, compile for cpu codegen)
 AC_SUBST(EMSCRIPTEN, [$WANT_EMSCRIPTEN])
 
 dnl Target OS type (target is host if not cross-compiling).
@@ -297,12 +296,7 @@ AS_IF([test  "x$have_libvhd" = "xyes" ], [
 
 dnl We want pthreads. Try libpthread first, then libc_r (FreeBSD), then PTL.
 
-if [[ -z "${macemujs_conf_pthreads// }" ]]; then
-  echo "skipping pthreads"
-  HAVE_PTHREADS=no
-else
-  HAVE_PTHREADS=yes
-fi
+HAVE_PTHREADS=yes
 AC_CHECK_LIB(pthread, pthread_create, , [
   AC_CHECK_LIB(c_r, pthread_create, , [
     AC_CHECK_LIB(PTL, pthread_create, , [
@@ -645,13 +639,8 @@ if [[ -z "${macemujs_conf_native// }" ]]; then
   # EXTRASYSSRCS="$EXTRASYSSRCS ../browser/browser_io.cpp"
 
 
-  if [[ -z "${macemujs_conf_mainthread// }" ]]; then
-    echo "using hacked version of audio_oss_esd for sab target"
-    AUDIOSRC=audio_oss_esd.cpp
-  else
-    echo "disabling audio for mainthread js target"
-    AUDIOSRC=../dummy/audio_dummy.cpp
-  fi
+  echo "using hacked version of audio_oss_esd for sab target"
+  AUDIOSRC=audio_oss_esd.cpp
 else
   echo "target_os=$target_os"
 case "$target_os" in
@@ -1144,13 +1133,6 @@ AC_TRANSLATE_DEFINE(SIGACTION_NEED_REINSTALL, "$ac_cv_sigaction_need_reinstall",
   [Define if your system requires sigactions to be reinstalled.])
 
 
-if [[ -n "${macemujs_conf_cpu// }" ]]; then
-  echo "skipping mach exceptions detection"
-  ac_cv_have_mach_exceptions=no
-elif [[ "yes" ]]; then
-  echo "skipping mach exceptions detection"
-  ac_cv_have_mach_exceptions=no
-else
 dnl Check if Mach exceptions supported.
 AC_CACHE_CHECK([whether your system supports Mach exceptions],
   ac_cv_have_mach_exceptions, [
@@ -1175,7 +1157,7 @@ AC_CACHE_CHECK([whether your system supports Mach exceptions],
   AC_LANG_RESTORE
   ]
 )
-fi
+
 AC_TRANSLATE_DEFINE(HAVE_MACH_EXCEPTIONS, "$ac_cv_have_mach_exceptions",
   [Define if your system supports Mach exceptions.])
 
@@ -1467,7 +1449,7 @@ dnl As of 2001/08/02, this affects the following compilers:
 dnl Official: probably gcc-3.1 (mainline CVS)
 dnl Mandrake: gcc-2.96 >= 0.59mdk, gcc-3.0.1 >= 0.1mdk
 dnl Red Hat : gcc-2.96 >= 89, gcc-3.0 >= 1
-if [[ "x$HAVE_GCC27" = "xyes" -a "x$HAVE_ICC" = "xno" ]]; then
+if [[ "x$HAVE_GCC27" = "xyes" -a "x$HAVE_ICC" = "xno" -a "x$WANT_EMSCRIPTEN" = "xno" ]]; then
   SAVED_CXXFLAGS="$CXXFLAGS"
   CXXFLAGS="$CXXFLAGS -fno-merge-constants"
   AC_CACHE_CHECK([whether GCC supports constants merging], ac_cv_gcc_constants_merging, [
@@ -1483,7 +1465,7 @@ fi
 
 dnl Store motion was introduced in 3.3-hammer branch and any gcc >= 3.4
 dnl However, there are some corner cases exposed on x86-64
-if [[ "x$HAVE_GCC27" = "xyes" -a "x$HAVE_ICC" = "xno" ]]; then
+if [[ "x$HAVE_GCC27" = "xyes" -a "x$HAVE_ICC" = "xno" -a "x$WANT_EMSCRIPTEN" = "xno" ]]; then
   SAVED_CXXFLAGS="$CXXFLAGS"
   CXXFLAGS="$CXXFLAGS -fno-gcse-sm"
   AC_CACHE_CHECK([whether GCC supports store motion], ac_cv_gcc_store_motion, [
@@ -1535,11 +1517,6 @@ dnl Other platforms should define their own set of noflags file variants
 CAN_JIT=no
 JITSRCS="compemu1.cpp compemu2.cpp compemu3.cpp compemu4.cpp compemu5.cpp compemu6.cpp compemu7.cpp compemu8.cpp"
 
-
-if [[ -n "${macemujs_conf_cpu// }" ]]; then
-  echo "skipping assembly optimizations"
-else
-
 if [[ "x$HAVE_GCC27" = "xyes" -a "x$HAVE_I386" = "xyes" ]]; then
   dnl i386 CPU
   DEFINES="$DEFINES -DUNALIGNED_PROFITABLE -DREGPARAM=\"__attribute__((regparm(3)))\""
@@ -1585,8 +1562,6 @@ elif [[ "x$WANT_NATIVE_M68K" = "xyes" ]]; then
   dnl Native m68k, no emulation
   CPUINCLUDES="-I../native_cpu"
   CPUSRCS="asm_support.s"
-fi
-
 fi
 
 dnl Enable JIT compiler, if possible.
