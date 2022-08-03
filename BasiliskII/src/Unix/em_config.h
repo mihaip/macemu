@@ -15,8 +15,6 @@
 #define SIZEOF_LONG_LONG 8
 #define SIZEOF_SHORT 2
 #define SIZEOF_VOID_P 4
-#undef __MACH__
-#undef HAVE_CLOCK_GETTIME
 
 #define USE_CPU_EMUL_SERVICES 1
 
@@ -24,11 +22,5 @@
 
 // #define FLIGHT_RECORDER 1
 
-#undef AQUA
-#undef HAVE_FRAMEWORK_COREFOUNDATION
-#undef HAVE_MACH_EXCEPTIONS
-#undef HAVE_LIBPOSIX4
-#undef HAVE_LIBRT
-#undef HAVE_MMAP_VM
 // Disable assembly optimizations in the emulated CPU.
 #undef OPTIMIZED_FLAGS

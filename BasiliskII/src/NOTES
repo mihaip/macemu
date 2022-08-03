@@ -4,15 +4,6 @@ commands run in Unix dir
 cd src/Unix
 ```
 
-# make for native
-
-```
-macemujs_conf_native=1  ./_embuild.sh
-make clean
-make
-./BasiliskII
-```
-
 ## make for browser
 
 ```
@@ -21,10 +12,10 @@ source path/to/emsdk/emsdk_env.sh
 # eg. source ~/code/tools/emsdk/emsdk_env.sh
 
 # first, make sure you've already built for native once, as this produces generated CPU source files
- macemujs_conf_native=1 ./_embuild.sh && make clean && make cpuemu.cpp
+./_emboostrap.sh
 
-# _embuild.sh runs the configure script.
-./_embuild.sh
+# _emconfigure.sh runs the configure script with configure flags.
+./_emconfigure.sh
 
 # now actually build it
 # use 'mostlyclean' because 'clean' will delete the generated CPU files

@@ -94,7 +94,6 @@ AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
 
 
-AC_ARG_VAR(macemujs_conf_native, compile for native target)
 AC_SUBST(EMSCRIPTEN, [$WANT_EMSCRIPTEN])
 
 dnl Target OS type (target is host if not cross-compiling).
@@ -620,33 +619,16 @@ AC_CHECK_FRAMEWORK(IOKit, [#include <IOKit/IOKitLib.h>])
 AC_CHECK_FRAMEWORK(CoreFoundation, [#include <CoreFoundation/CoreFoundation.h>])
 
 dnl Select system-dependant source files.
-dnl SERIALSRC=serial_unix.cpp
-SERIALSRC=../dummy/serial_dummy.cpp
+SERIALSRC=serial_unix.cpp
 ETHERSRC=../dummy/ether_dummy.cpp
 SCSISRC=../dummy/scsi_dummy.cpp
 AUDIOSRC=../dummy/audio_dummy.cpp
 EXTFSSRC=extfs_unix.cpp
-MACROMANSRC=macroman.cpp
-EXTRASYSSRCS=
+EXTRASYSSRCS=macroman.cpp
 CAN_NATIVE_M68K=no
-
-if [[ -z "${macemujs_conf_native// }" ]]; then
-  ETHERSRC=JS/ether_js.cpp
-
-  EXTRASYSSRCS="$EXTRASYSSRCS JS/input_js.cpp"
-
-  # echo "adding browser io"
-  # EXTRASYSSRCS="$EXTRASYSSRCS ../browser/browser_io.cpp"
-
-
-  echo "using hacked version of audio_oss_esd for sab target"
-  AUDIOSRC=audio_oss_esd.cpp
-else
-  echo "target_os=$target_os"
 case "$target_os" in
 linux*)
-  ETHERSRC=ether_dummy.cpp
-  EXTRASYSSRCS=""
+  ETHERSRC=ether_unix.cpp
   AUDIOSRC=audio_oss_esd.cpp
   SCSISRC=Linux/scsi_linux.cpp
   ;;
@@ -712,14 +694,7 @@ cygwin*)
   EXTRASYSSRCS="../Windows/BasiliskII.rc"
   ;;
 esac
-fi
 
-
-dnl if [[ -z "${macemujs_conf_native// }" ]]; then
-
-if [[ true ]]; then
-  echo "skipping slirp"
-else
 dnl Is the slirp library supported?
 case "$ac_cv_have_byte_bitfields" in
 yes|"guessing yes")
@@ -738,7 +713,6 @@ if [[ -n "$CAN_SLIRP" ]]; then
     ../slirp/ip_input.c  ../slirp/socket.c     ../slirp/udp.c"
 fi
 AC_SUBST(SLIRP_SRCS)
-fi
 
 if [[ "x$WANT_MACOSX_GUI" = "xyes" ]]; then
   CPPFLAGS="$CPPFLAGS -I../MacOSX"
@@ -771,9 +745,7 @@ if [[ "x$WANT_SDL_VIDEO" = "xyes" ]]; then
   AC_DEFINE(USE_SDL_VIDEO, 1, [Define to enable SDL video graphics support])
   VIDEOSRCS="../SDL/video_sdl.cpp"
   KEYCODES="../SDL/keycodes"
-  if [[ "true" ]]; then
-      EXTRASYSSRCS="$EXTRASYSSRCS ../dummy/clip_dummy.cpp"
-  elif [[ "x$ac_cv_framework_Carbon" = "xyes" ]]; then
+  if [[ "x$ac_cv_framework_Carbon" = "xyes" ]]; then
     AC_MSG_CHECKING([whether __LP64__ is defined])
     AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#if !defined(__LP64__)
                                          # error __LP64__ not defined
@@ -832,22 +804,20 @@ if [[ "x$HAVE_PTHREADS" = "xno" ]]; then
   dnl Serial, ethernet and audio support needs pthreads
   AC_MSG_WARN([You don't have pthreads, disabling serial, ethernet and audio support.])
   SERIALSRC=../dummy/serial_dummy.cpp
-
-  if [[ -z "${macemujs_conf_native_os// }" ]]; then
-  echo "(actually experimental ethernet and single thread browser audio is still enabled)"
-  else
-  AUDIOSRC=../dummy/audio_dummy.cpp
   ETHERSRC=../dummy/ether_dummy.cpp
-  fi
+  AUDIOSRC=../dummy/audio_dummy.cpp
 fi
 
-dnl HACK TO REMOVE DEPS
-dnl if [[ -z $macemujs_conf_native ]]; then
-dnl SERIALSRC=../dummy/serial_dummy.cpp
-dnl ETHERSRC=../dummy/ether_dummy.cpp
-dnl AUDIOSRC=../dummy/audio_dummy.cpp
-dnl fi
-SYSSRCS="$VIDEOSRCS $EXTFSSRC $MACROMANSRC $SERIALSRC $ETHERSRC $SCSISRC $AUDIOSRC $SEMSRC $UISRCS $MONSRCS $EXTRASYSSRCS"
+if [[ "x$WANT_EMSCRIPTEN" = "xyes" ]]; then
+  SCSISRC=../dummy/scsi_dummy.cpp
+  ETHERSRC=JS/ether_js.cpp
+  EXTRASYSSRCS="$EXTRASYSSRCS JS/input_js.cpp"
+  dnl Using hacked version of audio_oss_esd
+  AUDIOSRC=audio_oss_esd.cpp
+  dnl EXTRASYSSRCS="$EXTRASYSSRCS ../dummy/clip_dummy.cpp"
+fi
+
+SYSSRCS="$VIDEOSRCS $EXTFSSRC $SERIALSRC $ETHERSRC $SCSISRC $AUDIOSRC $SEMSRC $UISRCS $MONSRCS $EXTRASYSSRCS"
 
 dnl Define a macro that translates a yesno-variable into a C macro definition
 dnl to be put into the config.h file
@@ -932,12 +902,6 @@ if [[ "x$have_mach_vm" = "xyes" ]]; then
 fi
 AC_TRANSLATE_DEFINE(HAVE_MACH_VM, "$have_mach_vm",
   [Define if your system has a working vm_allocate()-based memory allocator.])
-
-dnl Force no support for mach_vm
-have_mach_vm=no
-AC_TRANSLATE_DEFINE(HAVE_MACH_VM, "$have_mach_vm",
-  [Define if your system has a working vm_allocate()-based memory allocator.])
-
 
 fi dnl HAVE_MACH_VM
 
@@ -1132,7 +1096,6 @@ AC_CACHE_CHECK([whether sigaction handlers need to be reinstalled],
 AC_TRANSLATE_DEFINE(SIGACTION_NEED_REINSTALL, "$ac_cv_sigaction_need_reinstall",
   [Define if your system requires sigactions to be reinstalled.])
 
-
 dnl Check if Mach exceptions supported.
 AC_CACHE_CHECK([whether your system supports Mach exceptions],
   ac_cv_have_mach_exceptions, [
@@ -1157,7 +1120,6 @@ AC_CACHE_CHECK([whether your system supports Mach exceptions],
   AC_LANG_RESTORE
   ]
 )
-
 AC_TRANSLATE_DEFINE(HAVE_MACH_EXCEPTIONS, "$ac_cv_have_mach_exceptions",
   [Define if your system supports Mach exceptions.])
 
@@ -1331,8 +1293,6 @@ if [[ -n "$LINKER_SCRIPT_FLAGS" ]]; then
 fi
 AC_TRANSLATE_DEFINE(HAVE_LINKER_SCRIPT, "$ac_cv_linker_script_works",
   [Define if there is a linker script to relocate the executable above 0x70000000.])
-
-
 
 dnl Determine the addressing mode to use
 if [[ "x$WANT_NATIVE_M68K" = "xyes" ]]; then

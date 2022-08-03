@@ -23,7 +23,7 @@ CXXFLAGS = @CXXFLAGS@
 CPUINCLUDES_FLAGS=@CPUINCLUDES@
 CPUINCLUDES_FLAGS:=$(CPUINCLUDES_FLAGS:-I%=-I@top_srcdir@/%)
 CPPFLAGS = @CPPFLAGS@ -I@top_srcdir@/../include -I@top_srcdir@/. -I. $(CPUINCLUDES_FLAGS)
-ifdef macemujs_conf_native
+ifneq ($(EMSCRIPTEN),yes)
 	# this breaks under emscripten because libcxx accidentally includes a file inside this dir :(
 	CPPFLAGS += -I@top_srcdir@/../slirp
 endif
@@ -44,9 +44,6 @@ EXEEXT = @EXEEXT@
 INSTALL = @INSTALL@
 INSTALL_PROGRAM = @INSTALL_PROGRAM@
 INSTALL_DATA = @INSTALL_DATA@
-
-macemujs_conf_native = @macemujs_conf_native@
-
 
 SLIRP_CFLAGS = @SLIRP_CFLAGS@
 SLIRP_SRCS = @SLIRP_SRCS@
