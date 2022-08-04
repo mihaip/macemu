@@ -294,7 +294,6 @@ AS_IF([test  "x$have_libvhd" = "xyes" ], [
 
 
 dnl We want pthreads. Try libpthread first, then libc_r (FreeBSD), then PTL.
-
 HAVE_PTHREADS=yes
 AC_CHECK_LIB(pthread, pthread_create, , [
   AC_CHECK_LIB(c_r, pthread_create, , [
@@ -303,17 +302,14 @@ AC_CHECK_LIB(pthread, pthread_create, , [
     ])
   ])
 ])
-
-
-
 if [[ "x$HAVE_PTHREADS" = "xyes" ]]; then
   AC_DEFINE(HAVE_PTHREADS, 1, [Define if pthreads are available.])
-  AC_CHECK_FUNCS(pthread_cond_init)
-  AC_CHECK_FUNCS(pthread_cancel pthread_testcancel)
-  AC_CHECK_FUNCS(pthread_mutexattr_setprotocol)
-  AC_CHECK_FUNCS(pthread_mutexattr_settype)
-  AC_CHECK_FUNCS(pthread_mutexattr_setpshared)
 fi
+AC_CHECK_FUNCS(pthread_cond_init)
+AC_CHECK_FUNCS(pthread_cancel pthread_testcancel)
+AC_CHECK_FUNCS(pthread_mutexattr_setprotocol)
+AC_CHECK_FUNCS(pthread_mutexattr_settype)
+AC_CHECK_FUNCS(pthread_mutexattr_setpshared)
 
 dnl If POSIX.4 semaphores are not available, we emulate them with pthread mutexes.
 SEMSRC=
@@ -760,6 +756,8 @@ if [[ "x$WANT_SDL_VIDEO" = "xyes" ]]; then
     fi
     EXTRASYSSRCS="$EXTRASYSSRCS ../MacOSX/utils_macosx.mm"
     CPPFLAGS="$CPPFLAGS -I../MacOSX"
+  elif [[ "x$WANT_EMSCRIPTEN" = "xyes" ]]; then
+      EXTRASYSSRCS="$EXTRASYSSRCS JS/clip_js.cpp"
   else
     case "$target_os" in
     cygwin*)
@@ -814,7 +812,6 @@ if [[ "x$WANT_EMSCRIPTEN" = "xyes" ]]; then
   EXTRASYSSRCS="$EXTRASYSSRCS JS/input_js.cpp"
   dnl Using hacked version of audio_oss_esd
   AUDIOSRC=audio_oss_esd.cpp
-  dnl EXTRASYSSRCS="$EXTRASYSSRCS ../dummy/clip_dummy.cpp"
 fi
 
 SYSSRCS="$VIDEOSRCS $EXTFSSRC $SERIALSRC $ETHERSRC $SCSISRC $AUDIOSRC $SEMSRC $UISRCS $MONSRCS $EXTRASYSSRCS"

@@ -137,7 +137,7 @@ std::map<uint8, uint16> MACROMAN_TO_UNICODE = {
 
 std::map<uint16, uint8> UNICODE_TO_MACROMAN;
 
-const char *utf8_to_macroman(const char *utf8)
+const char *utf8_to_macroman(const char *utf8, size_t utf8_len)
 {
 	// Emscripten's version of iconv does not have support for MACROMAN,
 	// so decode to UTF_16LE (to make traversal easier) and then do the lookup.
@@ -146,7 +146,6 @@ const char *utf8_to_macroman(const char *utf8)
 		printf("Could not get UTF-8 -> UTF_16LE conversion descriptor\n");
 		return utf8;
 	}
-	size_t utf8_len = strlen(utf8);
 
 	char *utf8_in = const_cast<char *>(utf8);
 	size_t utf8_in_len = utf8_len;
@@ -193,14 +192,12 @@ const char *utf8_to_macroman(const char *utf8)
 	return macroman;
 }
 
-const char *macroman_to_utf8(const char *macroman) {
+const char *macroman_to_utf8(const char *macroman, size_t macroman_len) {
 	iconv_t iconv_cd = iconv_open("UTF-8", "UTF_16LE");
 	if (iconv_cd == (iconv_t) -1) {
 		printf("Could not get UTF_16LE -> UTF-8 conversion descriptor\n");
 		return macroman;
 	}
-
-	size_t macroman_len = strlen(macroman);
 
 	size_t utf16_len = macroman_len * 2; // upper bound
 	uint16 *utf16 = (uint16 *)malloc(utf16_len);

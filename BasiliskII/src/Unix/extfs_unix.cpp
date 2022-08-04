@@ -381,11 +381,11 @@ bool extfs_rename(const char *old_path, const char *new_path)
 // Convert from the host OS filename encoding to MacRoman
 const char *host_encoding_to_macroman(const char *filename)
 {
-	return utf8_to_macroman(filename);
+	return utf8_to_macroman(filename, strlen(filename));
 }
 
 // Convert from MacRoman to host OS filename encoding
 const char *macroman_to_host_encoding(const char *filename)
 {
-	return macroman_to_utf8(filename);
+	return macroman_to_utf8(filename, strlen(filename));
 }
