@@ -388,9 +388,8 @@ bool ether_init(void)
 		ether_addr[4] = 0x34;
 		ether_addr[5] = 0x56;
 #endif
-	} else {
+	} else
 		ioctl(fd, SIOCGIFADDR, ether_addr);
-	}
 	D(bug("Ethernet address %02x %02x %02x %02x %02x %02x\n", ether_addr[0], ether_addr[1], ether_addr[2], ether_addr[3], ether_addr[4], ether_addr[5]));
 
 	// Start packet reception thread

@@ -134,7 +134,6 @@ static int vm_acquire_mac_fixed(void *addr, size_t size)
 
 static sigsegv_return_t sigsegv_handler(sigsegv_info_t *sip)
 {
-	printf("sigsegv_handler\n");
 	const uintptr fault_address = (uintptr)sigsegv_get_fault_address(sip);
 #if ENABLE_VOSF
 	// Handle screen fault
@@ -315,9 +314,7 @@ bool InitEmulator (void)
 	const char *vmdir = NULL;
 	char str[256];
 
-#ifdef HAVE_MACH_EXCEPTIONS
 
-	printf("HAVE_MACH_EXCEPTIONS");
 	// Install the handler for SIGSEGV
 	if (!sigsegv_install_handler(sigsegv_handler)) {
 		sprintf(str, GetString(STR_SIG_INSTALL_ERR), "SIGSEGV", strerror(errno));
@@ -327,8 +324,6 @@ bool InitEmulator (void)
 
 	// Register dump state function when we got mad after a segfault
 	sigsegv_set_dump_state(sigsegv_dump_state);
-
-#endif
 
 	// Read RAM size
 	RAMSize = PrefsFindInt32("ramsize") & 0xfff00000;	// Round down to 1MB boundary

@@ -220,7 +220,7 @@ static bool open_js(void)
 	int opt_ss = audio_sample_sizes[audio_sample_size_index];
 	int opt_ch = audio_channel_counts[audio_channel_count_index];
 
-#if defined(EMSCRIPTEN) && !defined(__EMSCRIPTEN_PTHREADS__)
+#if defined(EMSCRIPTEN)
 	EM_ASM_({
 
   	workerApi.openAudio($0, $1, $2, $3);
@@ -338,7 +338,7 @@ dev_opened:
 	sound_buffer_size = (audio_sample_sizes[audio_sample_size_index] >> 3) * audio_channel_counts[audio_channel_count_index] * audio_frames_per_block;
 	set_audio_status_format();
 
-	#if defined(BROWSER_AUDIO) && !defined(__EMSCRIPTEN_PTHREADS__)
+	#if defined(BROWSER_AUDIO)
 		// ???
 		printf("audio would be happening now\n");
 	#else

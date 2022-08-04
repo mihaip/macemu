@@ -345,17 +345,14 @@ int vm_release(void * addr, size_t size)
 		return 0;
 
 #ifdef HAVE_MACH_VM
-	// #error HAVE_MACH_VM
 	if (vm_deallocate(mach_task_self(), (vm_address_t)addr, size) != KERN_SUCCESS)
 		return -1;
 #else
 #ifdef HAVE_MMAP_VM
-	// #error HAVE_MMAP_VM
 	if (munmap((caddr_t)addr, size) != 0)
 		return -1;
 #else
 #ifdef HAVE_WIN32_VM
-	// #error HAVE_WIN32_VM
 	if (VirtualFree(align_addr_segment(addr), 0, MEM_RELEASE) == 0)
 		return -1;
 #else

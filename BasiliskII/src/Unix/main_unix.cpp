@@ -72,13 +72,6 @@ struct sigstate {
 # include <X11/extensions/Xxf86dga.h>
 #endif
 
-#ifndef EMSCRIPTEN
-#define OSX_BACKTRACE 1
-#endif
-#ifdef OSX_BACKTRACE
-#include <execinfo.h>
-#endif
-
 #include <string>
 using std::string;
 
@@ -356,7 +349,6 @@ void cpu_do_check_ticks(void)
 	// Check for interrupt opportunity
 	now = GetTicks_usec();
 	if (next < now) {
-
 		one_tick();
 		do {
 			next += 16625;
@@ -381,20 +373,6 @@ void cpu_do_check_ticks(void)
 }
 #endif
 
-#ifdef OSX_BACKTRACE
-void segfaulthandler(int sig) {
-  void *array[10];
-  size_t size;
-
-  // get void*'s for all entries on the stack
-  size = backtrace(array, 10);
-
-  // print out all the frames to stderr
-  fprintf(stderr, "Error: signal %d:\n", sig);
-  backtrace_symbols_fd(array, size, STDERR_FILENO);
-  exit(1);
-}
-#endif
 
 /*
  *  Main program
@@ -415,60 +393,16 @@ static void usage(const char *prg_name)
 	exit(0);
 }
 
-#ifdef __EMSCRIPTEN_PTHREADS__
-static int main_argc;
-static char **main_argv;
-static pthread_t main_thread;
-static pthread_attr_t main_thread_attr;
-void Set_pthread_attr (pthread_attr_t *attr, int priority);
-void *main_thread_func(void *arg);
-
-int fake_main(int argc, char **argv);
-void emscripten_step();
-
-
-#endif
-
 int main(int argc, char **argv)
 {
-#ifdef __EMSCRIPTEN_PTHREADS__
-	main_argc = argc;
-	main_argv = argv;
-
-	Set_pthread_attr(&main_thread_attr, 0);
-	printf("spawining main thread\n");
-	pthread_create(&main_thread, NULL, main_thread_func, NULL);
-	emscripten_set_main_loop(*emscripten_step, 1, true);
-
-}
-
-void emscripten_step()
-{
-
-}
-
-void *main_thread_func(void *arg)
-{
-	printf("main_thread_func\n");
-	fake_main(main_argc, main_argv);
-}
-int fake_main(int argc, char **argv)
-{
-#endif // __EMSCRIPTEN_PTHREADS__
 	const char *vmdir = NULL;
 	char str[256];
-
-	printf("fake_main\n");
 
 	// Initialize variables
 	RAMBaseHost = NULL;
 	ROMBaseHost = NULL;
 	srand(time(NULL));
 	tzset();
-
-#ifdef OSX_BACKTRACE
-  signal(SIGSEGV, segfaulthandler);   // install our handler
-#endif
 
 	// Print some info
 	printf(GetString(STR_ABOUT_TEXT1), VERSION_MAJOR, VERSION_MINOR);
@@ -602,9 +536,7 @@ int fake_main(int argc, char **argv)
 		if (!PrefsEditor())
 			QuitEmulator();
 
-#ifdef HAVE_MACH_EXCEPTIONS
-
-	printf("HAVE_MACH_EXCEPTIONS");
+#ifndef EMSCRIPTEN
 	// Install the handler for SIGSEGV
 	if (!sigsegv_install_handler(sigsegv_handler)) {
 		sprintf(str, GetString(STR_SIG_INSTALL_ERR), "SIGSEGV", strerror(errno));
@@ -614,8 +546,7 @@ int fake_main(int argc, char **argv)
 	
 	// Register dump state function when we got mad after a segfault
 	sigsegv_set_dump_state(sigsegv_dump_state);
-
-#endif
+#endif // not EMSCRIPTEN
 
 	// Read RAM size
 	RAMSize = PrefsFindInt32("ramsize") & 0xfff00000;	// Round down to 1MB boundary
@@ -712,8 +643,6 @@ int fake_main(int argc, char **argv)
 	// Get rom file path from preferences
 	const char *rom_path = PrefsFindString("rom");
 
-	printf("rom_path %s\n", rom_path);
-
 	// Load Mac ROM
 	int rom_fd = open(rom_path ? rom_path : ROM_FILE_NAME, O_RDONLY);
 	if (rom_fd < 0) {
@@ -762,7 +691,6 @@ int fake_main(int argc, char **argv)
 	FPUType = 1;	// NetBSD has an FPU emulation, so the FPU ought to be available at all times
 	TwentyFourBitAddressing = false;
 #endif
-	printf("Initialize everything\n");
 
 	// Initialize everything
 	if (!InitAll(vmdir))
@@ -827,7 +755,6 @@ int fake_main(int argc, char **argv)
 	sigint_sa.sa_flags = 0;
 	sigaction(SIGINT, &sigint_sa, NULL);
 #endif
-	printf("services\n");
 
 #ifndef USE_CPU_EMUL_SERVICES
 #if defined(HAVE_PTHREADS)
@@ -879,7 +806,7 @@ int fake_main(int argc, char **argv)
 	sigemptyset(&timer_sa.sa_mask);		// Block virtual 68k interrupts during SIGARLM handling
 #if !EMULATED_68K
 	sigaddset(&timer_sa.sa_mask, SIG_IRQ);
-#endif // defined(HAVE_PTHREADS)
+#endif
 	timer_sa.sa_handler = one_tick;
 	timer_sa.sa_flags = SA_ONSTACK | SA_RESTART;
 	if (sigaction(SIGALRM, &timer_sa, NULL) < 0) {
@@ -904,10 +831,8 @@ int fake_main(int argc, char **argv)
 
 	// Start 68k and jump to ROM boot routine
 	D(bug("Starting emulation...\n"));
-	printf("Starting emulation\n");
 	Start680x0();
 
-	printf("Quit\n");
 	QuitEmulator();
 	return 0;
 }
@@ -1257,13 +1182,10 @@ static void one_tick(...)
 
 #ifndef USE_PTHREADS_SERVICES
 	// Threads not used to trigger interrupts, perform video refresh from here
-	// printf("VideoRefresh\n");
 	VideoRefresh();
-#else
-	printf("USE_PTHREADS_SERVICES\n");
 #endif
 
-#if defined(EMSCRIPTEN) && !defined(__EMSCRIPTEN_PTHREADS__)
+#if defined(EMSCRIPTEN)
 	// tuned (badly) for sr=22050 blocksize=4096
 	if ((tick_counter) % 11 == 0) {
 		audio_write_blocks(1);

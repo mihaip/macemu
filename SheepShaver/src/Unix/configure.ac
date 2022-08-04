@@ -595,14 +595,11 @@ EXTFSSRC=extfs_unix.cpp
 EXTRASYSSRCS=
 case "$target_os" in
 linux*)
-  if [[ "" ]]; then
-    echo "setting linux source files"
-    ETHERSRC=ether_unix.cpp
-    AUDIOSRC=audio_oss_esd.cpp
-    SCSISRC=Linux/scsi_linux.cpp
-    if [[ "x$EMULATED_PPC" = "xno" ]]; then
-      EXTRASYSSRCS="paranoia.cpp Linux/sheepthreads.c ppc_asm.S"
-    fi
+  ETHERSRC=ether_unix.cpp
+  AUDIOSRC=audio_oss_esd.cpp
+  SCSISRC=Linux/scsi_linux.cpp
+  if [[ "x$EMULATED_PPC" = "xno" ]]; then
+    EXTRASYSSRCS="paranoia.cpp Linux/sheepthreads.c ppc_asm.S"
   fi
   ;;
 freebsd*)
@@ -662,8 +659,6 @@ AS_IF([test  "x$have_bincue" = "xyes" ], [
    fi
 ])
 
-echo "target_os:$target_os"
-
 dnl LIBVHD
 AS_IF([test  "x$with_libvhd" = "xyes" ], [have_libvhd=yes], [have_libvhd=no])
 AS_IF([test  "x$have_libvhd" = "xyes" ], [
@@ -682,8 +677,6 @@ AS_IF([test  "x$have_libvhd" = "xyes" ], [
 
 
 
-dnl -- jsdf forcing slirp disabled
-if [[ "" ]]; then
 dnl Is the slirp library supported?
 case "$ac_cv_have_byte_bitfields" in
 yes|"guessing yes")
@@ -691,8 +684,6 @@ yes|"guessing yes")
   ETHERSRC=ether_unix.cpp
   ;;
 esac
-fi
-
 if [[ -n "$CAN_SLIRP" ]]; then
   AC_DEFINE(HAVE_SLIRP, 1, [Define if slirp library is supported])
   SLIRP_SRCS="\
@@ -716,10 +707,7 @@ if [[ "x$WANT_SDL_VIDEO" = "xyes" ]]; then
   AC_DEFINE(USE_SDL_VIDEO, 1, [Define to enable SDL video graphics support.])
   VIDEOSRCS="../SDL/video_sdl.cpp"
   KEYCODES="../SDL/keycodes"
-  dnl -- jsdf disabled osx clipboard code when SDL video enabled
-  if [[ true ]]; then
-    EXTRASYSSRCS="$EXTRASYSSRCS ../dummy/clip_dummy.cpp"
-  elif [[ "x$ac_cv_framework_Carbon" = "xyes" ]]; then
+  if [[ "x$ac_cv_framework_Carbon" = "xyes" ]]; then
     AC_MSG_CHECKING([whether __LP64__ is defined])
     AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[#if !defined(__LP64__)
                                          # error __LP64__ not defined

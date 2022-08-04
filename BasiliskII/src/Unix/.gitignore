@@ -2,13 +2,11 @@
 obj/*
 BasiliskII
 BasiliskII.bc
-BasiliskII.dSYM
-BasiliskII.data
-BasiliskII.html
 BasiliskII.js
-BasiliskII.js.map
-BasiliskII.js.mem
-BasiliskIIDebug
+BasiliskII.wasm
+BasiliskII.wasm.map
+a.wasm
+a.wasm.map
 
 # Autotools generated files
 Makefile
@@ -25,18 +23,3 @@ cpudefs.cpp
 cpuemu.cpp
 cpustbl.cpp
 cputbl.h
-
-# build
-a.out
-a.out.js
-a.out.js.map
-a.wasm
-a.wasm.map
-BasiliskII.wasm
-BasiliskII.wasm.map
-BasiliskII.wast
-BasiliskII.wasm.pre
-
-# files which change when testing native
-DCImage.img
-MacOS753

@@ -188,7 +188,6 @@ static void load_rom(void)
 {
 	// Get rom file path from preferences
 	const char *rom_path = PrefsFindString("powerrom");
-	printf("rom_path %s", *rom_path);
 
 	// Try to open ROM file
 	BFile file(rom_path ? rom_path : ROM_FILE_NAME, B_READ_ONLY);
