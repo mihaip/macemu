@@ -67,7 +67,9 @@ prefs_desc common_prefs_items[] = {
 	{"jitinline", TYPE_BOOLEAN, false,   "enable translation through constant jumps"},
 	{"jitblacklist", TYPE_STRING, false, "blacklist opcodes from translation"},
 	{"keyboardtype", TYPE_INT32, false, "hardware keyboard type"},
-	{"appletalk", TYPE_BOOLEAN, false,         "enable AppleTalk in default PRAM"},
+	{"appletalk", TYPE_BOOLEAN, false, "enable AppleTalk in default PRAM"},
+	{"jsfrequentreadinput", TYPE_BOOLEAN, false, "Read JS input frequently (multiple times per tick) to reduce latency"},
+
 	{NULL, TYPE_END, false, NULL} // End of list
 };
 
