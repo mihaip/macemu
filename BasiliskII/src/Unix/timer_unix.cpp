@@ -55,7 +55,6 @@ static inline void mach_current_time(tm_time_t &t) {
 #endif
 
 
-#include <time.h>
 /*
  *  Return microseconds since boot (64 bit)
  */

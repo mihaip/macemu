@@ -22,7 +22,6 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdint.h>
 
 #include "sysdeps.h"
 
@@ -536,9 +535,9 @@ void memory_init(void)
 	// Limit RAM size to not overlap ROM
 	uint32 ram_size = RAMSize > ROMBaseMac ? ROMBaseMac : RAMSize;
 
-	RAMBaseDiff = (uintptr_t)RAMBaseHost - (uintptr_t)RAMBaseMac;
-	ROMBaseDiff = (uintptr_t)ROMBaseHost - (uintptr_t)ROMBaseMac;
-	FrameBaseDiff = (uintptr_t)MacFrameBaseHost - (uintptr_t)MacFrameBaseMac;
+	RAMBaseDiff = (uintptr)RAMBaseHost - (uintptr)RAMBaseMac;
+	ROMBaseDiff = (uintptr)ROMBaseHost - (uintptr)ROMBaseMac;
+	FrameBaseDiff = (uintptr)MacFrameBaseHost - (uintptr)MacFrameBaseMac;
 
 	// Map RAM and ROM
 	if (TwentyFourBitAddressing) {

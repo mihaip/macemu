@@ -118,9 +118,9 @@ extern void byteput(uaecptr addr, uae_u32 b);
 #endif /* !DIRECT_ADDRESSING && !REAL_ADDRESSING */
 
 #if REAL_ADDRESSING
-const uintptr_t MEMBaseDiff = 0;
+const uintptr MEMBaseDiff = 0;
 #elif DIRECT_ADDRESSING
-extern uintptr_t MEMBaseDiff;
+extern uintptr MEMBaseDiff;
 #endif
 
 #if REAL_ADDRESSING || DIRECT_ADDRESSING
@@ -130,7 +130,7 @@ static __inline__ uae_u8 *do_get_real_address(uaecptr addr)
 }
 static __inline__ uae_u32 do_get_virtual_address(uae_u8 *addr)
 {
-	return (uintptr_t)addr - MEMBaseDiff;
+	return (uintptr)addr - MEMBaseDiff;
 }
 static __inline__ uae_u32 get_long(uaecptr addr)
 {
