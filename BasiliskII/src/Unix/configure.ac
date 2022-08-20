@@ -302,6 +302,9 @@ AC_CHECK_LIB(pthread, pthread_create, , [
     ])
   ])
 ])
+if [[ "x$WANT_EMSCRIPTEN" = "xyes" ]]; then
+  HAVE_PTHREADS=no
+fi
 if [[ "x$HAVE_PTHREADS" = "xyes" ]]; then
   AC_DEFINE(HAVE_PTHREADS, 1, [Define if pthreads are available.])
 fi
@@ -906,7 +909,7 @@ dnl Various checks if the system supports mmap() and the like functions.
 dnl ... and Mach memory allocators are not supported
 have_mmap_vm=no
 if [[ "x$ac_cv_func_mmap" = "xyes" -a "x$ac_cv_func_munmap" = "xyes" -a \
-      "x$ac_cv_func_mprotect" = "xyes" ]]; then
+      "x$ac_cv_func_mprotect" = "xyes" -a "x$WANT_EMSCRIPTEN" = "xno" ]] ; then
   if [[ "x$have_mach_vm" = "xno" ]]; then
     have_mmap_vm=yes
   fi
