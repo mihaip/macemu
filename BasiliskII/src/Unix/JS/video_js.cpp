@@ -80,6 +80,10 @@ bool JS_monitor_desc::video_open()
     }
   }
 
+  EM_ASM_({
+    workerApi.didOpenVideo($0, $1);
+  }, mode.x, mode.y);
+
   return true;
 }
 
@@ -203,14 +207,12 @@ void VideoExit() {
 }
 
 void VideoRefresh() {
-  D(bug("VideoRefresh()\n"));
   for (auto monitor : VideoMonitors) {
 		dynamic_cast<JS_monitor_desc *>(monitor)->video_blit();
   }
 }
 
 void VideoInterrupt() {
-  D(bug("VideoInterrupt()\n"));
   // No-op
 }
 
