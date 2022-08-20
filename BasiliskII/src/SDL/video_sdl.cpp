@@ -66,13 +66,6 @@
 #define DEBUG 0
 #include "debug.h"
 
-#define REUSE_VIDEO_BUFFER 1
-#define BROWSER_VIDEO 1
-
-#ifdef EMSCRIPTEN
-#include <emscripten.h>
-#include "SpookyV2.h"
-#endif
 // Supported video modes
 using std::vector;
 static vector<VIDEO_MODE> VideoModes;
@@ -141,10 +134,7 @@ static int screen_depth;							// Depth of current screen
 static SDL_Cursor *sdl_cursor;						// Copy of Mac cursor
 static SDL_Color sdl_palette[256];					// Color palette to be used as CLUT and gamma table
 static bool sdl_palette_changed = false;			// Flag: Palette changed, redraw thread must set new colors
-#ifndef EMSCRIPTEN
-// this breaks in clang :(
 static const int sdl_eventmask = SDL_MOUSEEVENTMASK | SDL_KEYEVENTMASK | SDL_VIDEOEXPOSEMASK | SDL_QUITMASK | SDL_ACTIVEEVENTMASK;
-#endif
 
 // Mutex to protect SDL events
 static SDL_mutex *sdl_events_lock = NULL;
@@ -456,9 +446,6 @@ static void sdl_display_dimensions(int &width, int &height)
 
 static inline int sdl_display_width(void)
 {
-	#ifdef EMSCRIPTEN
-		return 800;
-	#endif
 	int width, height;
 	sdl_display_dimensions(width, height);
 	return width;
@@ -466,9 +453,6 @@ static inline int sdl_display_width(void)
 
 static inline int sdl_display_height(void)
 {
-	#ifdef EMSCRIPTEN
-		return 600;
-	#endif
 	int width, height;
 	sdl_display_dimensions(width, height);
 	return height;
@@ -518,7 +502,6 @@ static void add_mode(int type, int width, int height, int resolution_id, int byt
 static void set_mac_frame_buffer(SDL_monitor_desc &monitor, int depth, bool native_byte_order)
 {
 #if !REAL_ADDRESSING && !DIRECT_ADDRESSING
-
 	int layout = FLAYOUT_DIRECT;
 	if (depth == VIDEO_DEPTH_16BIT)
 		layout = (screen_depth == 15) ? FLAYOUT_HOST_555 : FLAYOUT_HOST_565;
@@ -529,7 +512,6 @@ static void set_mac_frame_buffer(SDL_monitor_desc &monitor, int depth, bool nati
 	else
 		MacFrameLayout = FLAYOUT_DIRECT;
 	monitor.set_mac_frame_base(MacFrameBaseMac);
-		printf("monitor.set_mac_frame_base(MacFrameBaseMac) native_byte_order=%d MacFrameLayout=%d\n",native_byte_order,MacFrameLayout);
 
 	// Set variables used by UAE memory banking
 	const VIDEO_MODE &mode = monitor.get_current_mode();
@@ -537,7 +519,6 @@ static void set_mac_frame_buffer(SDL_monitor_desc &monitor, int depth, bool nati
 	MacFrameSize = VIDEO_MODE_ROW_BYTES * VIDEO_MODE_Y;
 	InitFrameBufferMapping();
 #else
-	printf("monitor.set_mac_frame_base(Host2MacAddr(the_buffer))\n");
 	monitor.set_mac_frame_base(Host2MacAddr(the_buffer));
 #endif
 	D(bug("monitor.mac_frame_base = %08x\n", monitor.get_mac_frame_base()));
@@ -609,35 +590,6 @@ static void migrate_screen_prefs(void)
 #endif
 }
 
-// Map RGB color to pixel value (this only works in TrueColor/DirectColor visuals)
-static inline uint32 map_rgb(uint8 red, uint8 green, uint8 blue, bool fix_byte_order = false)
-{
-  uint32 val = (red&0xff)|(green&0xff)<<8|(blue&0xff)<<16|0xff000000;
-  return val;
-
-	// uint32 val = ((red >> 8) << 0) | ((green >> 8) << 0) | ((blue >> 8) << 0);
-
-	if (fix_byte_order) {
-		// We have to fix byte order in the ExpandMap[]
-		// NOTE: this is only an optimization since Screen_blitter_init()
-		// could be arranged to choose an NBO or OBO (with
-		// byteswapping) Blit_Expand_X_To_Y() function
-		switch (32) {
-		case 15: case 16:
-			val = do_byteswap_16(val);
-			break;
-		case 24: case 32:
-			val = do_byteswap_32(val);
-			break;
-		}
-	}
-	return val;
-}
-
-__attribute__((noinline))
-void free_browser_pixels(uint8 *browser_pixels) {
-	free(browser_pixels);
-}
 
 /*
  *  Display "driver" classes
@@ -666,9 +618,6 @@ public:
 
 	bool init_ok;	// Initialization succeeded (we can't use exceptions because of -fomit-frame-pointer)
 	SDL_Surface *s;	// The surface we draw into
-	bool is_raw_screen_blit;
-
-	// uint8 *browser_pixels;
 };
 
 class driver_window;
@@ -715,7 +664,6 @@ driver_base::driver_base(SDL_monitor_desc &m)
 {
 	the_buffer = NULL;
 	the_buffer_copy = NULL;
-	// browser_pixels = NULL;
 }
 
 driver_base::~driver_base()
@@ -764,10 +712,8 @@ void driver_base::update_palette(void)
 {
 	const VIDEO_MODE &mode = monitor.get_current_mode();
 
-	#ifndef EMSCRIPTEN
 	if ((int)VIDEO_MODE_DEPTH <= VIDEO_DEPTH_8BIT)
 		SDL_SetPalette(s, SDL_PHYSPAL, sdl_palette, 0, 256);
-	#endif
 }
 
 // Disable mouse acceleration
@@ -781,28 +727,16 @@ void driver_base::restore_mouse_accel(void)
 }
 
 
-static uint8 *browser_pixels = NULL;
-
-uint8 *alloc_browser_pixels(int32 size_to_copy) {
-	if (browser_pixels) {
-		return browser_pixels;
-	}
-	printf("actually allocating browser pixels\n");
-	return (uint8 *)malloc(size_to_copy * sizeof(uint8));
-}
-
 /*
  *  Windowed display driver
  */
 
 static bool SDL_display_opened = false;
 
-
 // Open display
 driver_window::driver_window(SDL_monitor_desc &m)
 	: driver_base(m), mouse_grabbed(false)
 {
-	printf("driver_window::driver_window\n");
 	int width = VIDEO_MODE_X, height = VIDEO_MODE_Y;
 	int aligned_height = (height + 15) & ~15;
 
@@ -821,32 +755,12 @@ driver_window::driver_window(SDL_monitor_desc &m)
 
 	// Create surface
 	int depth = sdl_depth_of_video_depth(VIDEO_MODE_DEPTH);
-#ifdef EMSCRIPTEN
-	depth = 32; // always 32 is easier
-#else
 	if ((s = SDL_SetVideoMode(width, height, depth, SDL_HWSURFACE)) == NULL)
 		return;
-#endif
-
-	if (REUSE_VIDEO_BUFFER) {
-		uint32 size_to_copy = VIDEO_MODE_ROW_BYTES * VIDEO_MODE_Y;
-
-		// printf("driver_window checking browser_pixels %p != %p \n", (void *)browser_pixels, (void *)NULL);
-		// assert(browser_pixels == NULL);
-		browser_pixels = alloc_browser_pixels(size_to_copy);
-		assert(browser_pixels);
-		printf("driver_window allocated browser_pixels=%p\n", (void *)browser_pixels);
-		#ifdef EMSCRIPTEN
-		EM_ASM_({
-	  	workerApi.debugPointer($0);
-		}, browser_pixels);
-		#endif
-	}
 
 	SDL_display_opened = true;
 
 #ifdef ENABLE_VOSF
-	printf("using vosf\n");
 	use_vosf = true;
 	// Allocate memory for frame buffer (SIZE is extended to page-boundary)
 	the_host_buffer = (uint8 *)s->pixels;
@@ -872,22 +786,13 @@ driver_window::driver_window(SDL_monitor_desc &m)
 	}
 #endif
 	if (!use_vosf) {
-		printf("allocating the_buffer, the_buffer_copy\n");
 		// Allocate memory for frame buffer
-#if EMSCRIPTEN
-		the_buffer_size = (aligned_height + 2) * width * depth;
-#else
 		the_buffer_size = (aligned_height + 2) * s->pitch;
-#endif
 		the_buffer_copy = (uint8 *)calloc(1, the_buffer_size);
-		#ifdef BROWSER_VIDEO
-		the_buffer = (uint8 *)malloc(the_buffer_size);
-		#else
 		the_buffer = (uint8 *)vm_acquire_framebuffer(the_buffer_size);
-		#endif
 		D(bug("the_buffer = %p, the_buffer_copy = %p\n", the_buffer, the_buffer_copy));
 	}
-
+	
 #ifdef SHEEPSHAVER
 	// Create cursor
 	if ((sdl_cursor = SDL_CreateCursor(MacCursor + 4, MacCursor + 36, 16, 16, 0, 0)) != NULL) {
@@ -899,37 +804,22 @@ driver_window::driver_window(SDL_monitor_desc &m)
 #endif
 
 	// Set window name/class
-	#ifndef EMSCRIPTEN
 	set_window_name(STR_WINDOW_TITLE);
-	#endif
 
 	// Init blitting routines
+	SDL_PixelFormat *f = s->format;
 	VisualFormat visualFormat;
 	visualFormat.depth = depth;
-#if EMSCRIPTEN
-	// Magic values to force a Blit_Copy_Raw in 32-bit mode.
-	visualFormat.Rmask = 0xff00;
-	visualFormat.Gmask = 0xff0000;
-	visualFormat.Bmask = 0xff000000;
-#else
-	SDL_PixelFormat *f = s->format;
 	visualFormat.Rmask = f->Rmask;
 	visualFormat.Gmask = f->Gmask;
 	visualFormat.Bmask = f->Bmask;
-#endif
-	is_raw_screen_blit = !Screen_blitter_init(visualFormat, true, mac_depth_of_video_depth(VIDEO_MODE_DEPTH));
+	Screen_blitter_init(visualFormat, true, mac_depth_of_video_depth(VIDEO_MODE_DEPTH));
 
 	// Load gray ramp to 8->16/32 expand map
-	if (!IsDirectMode(mode)) {
-		for (int i=0; i<256; i++) {
-			#ifdef EMSCRIPTEN
-					// SDL_MapRGB is not implemented in emscripten
-					ExpandMap[i] = map_rgb(i, i, i, true);
-			#else
-					ExpandMap[i] = SDL_MapRGB(f, i, i, i);
-			#endif
-		}
-	}
+	if (!IsDirectMode(mode))
+		for (int i=0; i<256; i++)
+			ExpandMap[i] = SDL_MapRGB(f, i, i, i);
+
 	// Set frame buffer base
 	set_mac_frame_buffer(monitor, VIDEO_MODE_DEPTH, true);
 
@@ -940,15 +830,12 @@ driver_window::driver_window(SDL_monitor_desc &m)
 // Close display
 driver_window::~driver_window()
 {
-
 #ifdef ENABLE_VOSF
 	if (use_vosf)
 		the_host_buffer = NULL;	// don't free() in driver_base dtor
 #endif
-#ifndef EMSCRIPTEN
 	if (s)
 		SDL_FreeSurface(s);
-#endif
 }
 
 // Toggle mouse grab
@@ -1002,7 +889,6 @@ void driver_window::mouse_moved(int x, int y)
 driver_fullscreen::driver_fullscreen(SDL_monitor_desc &m)
 	: driver_base(m)
 {
-	printf("driver_fullscreen::driver_fullscreen\n");
 	int width = VIDEO_MODE_X, height = VIDEO_MODE_Y;
 	int aligned_height = (height + 15) & ~15;
 
@@ -1046,7 +932,7 @@ driver_fullscreen::driver_fullscreen(SDL_monitor_desc &m)
 		the_buffer = (uint8 *)vm_acquire_framebuffer(the_buffer_size);
 		D(bug("the_buffer = %p, the_buffer_copy = %p\n", the_buffer, the_buffer_copy));
 	}
-
+	
 	// Hide cursor
 	SDL_ShowCursor(0);
 
@@ -1057,7 +943,7 @@ driver_fullscreen::driver_fullscreen(SDL_monitor_desc &m)
 	visualFormat.Rmask = f->Rmask;
 	visualFormat.Gmask = f->Gmask;
 	visualFormat.Bmask = f->Bmask;
-	is_raw_screen_blit = !Screen_blitter_init(visualFormat, true, mac_depth_of_video_depth(VIDEO_MODE_DEPTH));
+	Screen_blitter_init(visualFormat, true, mac_depth_of_video_depth(VIDEO_MODE_DEPTH));
 
 	// Load gray ramp to 8->16/32 expand map
 	if (!IsDirectMode(mode))
@@ -1239,7 +1125,6 @@ bool VideoInit(bool classic)
 	mainBuffer.pageInfo = NULL;
 #endif
 
-	#ifndef EMSCRIPTEN
 	// Create Mutexes
 	if ((sdl_events_lock = SDL_CreateMutex()) == NULL)
 		return false;
@@ -1247,7 +1132,6 @@ bool VideoInit(bool classic)
 		return false;
 	if ((frame_buffer_lock = SDL_CreateMutex()) == NULL)
 		return false;
-	#endif
 
 	// Init keycode translation
 	keycode_init();
@@ -1291,12 +1175,8 @@ bool VideoInit(bool classic)
 	else if (default_height > sdl_display_height())
 		default_height = sdl_display_height();
 
-	#ifdef EMSCRIPTEN
-		screen_depth = 32;
-	#else
-		// Mac screen depth follows X depth
-		screen_depth = SDL_GetVideoInfo()->vfmt->BitsPerPixel;
-	#endif
+	// Mac screen depth follows X depth
+	screen_depth = SDL_GetVideoInfo()->vfmt->BitsPerPixel;
 	int default_depth;
 	switch (screen_depth) {
 	case 8:
@@ -1543,10 +1423,8 @@ void video_set_palette(void)
 }
 #endif
 
-
 void SDL_monitor_desc::set_palette(uint8 *pal, int num_in)
 {
-	// printf("set_palette\n");
 	const VIDEO_MODE &mode = get_current_mode();
 
 	// FIXME: how can we handle the gamma ramp?
@@ -1571,11 +1449,7 @@ void SDL_monitor_desc::set_palette(uint8 *pal, int num_in)
 	if (!IsDirectMode(mode)) {
 		for (int i=0; i<256; i++) {
 			int c = i & (num_in-1); // If there are less than 256 colors, we repeat the first entries (this makes color expansion easier)
-			#ifdef EMSCRIPTEN
-			ExpandMap[i] = map_rgb(pal[c*3+0], pal[c*3+1], pal[c*3+2], true);
-			#else
 			ExpandMap[i] = SDL_MapRGB(drv->s->format, pal[c*3+0], pal[c*3+1], pal[c*3+2]);
-			#endif
 		}
 
 #ifdef ENABLE_VOSF
@@ -1736,10 +1610,8 @@ static bool is_modifier_key(SDL_KeyboardEvent const & e)
 	case SDLK_LALT:
 	case SDLK_RMETA:
 	case SDLK_LMETA:
-	#ifndef EMSCRIPTEN
 	case SDLK_LSUPER:
 	case SDLK_RSUPER:
-	#endif
 	case SDLK_MODE:
 	case SDLK_COMPOSE:
 		return true;
@@ -1838,10 +1710,8 @@ static int kc_decode(SDL_keysym const & ks, bool key_down)
 	case SDLK_LMETA: return 0x3a;
 	case SDLK_RMETA: return 0x3a;
 #endif
-	#ifndef EMSCRIPTEN
 	case SDLK_LSUPER: return 0x3a; // "Windows" key
 	case SDLK_RSUPER: return 0x3a;
-	#endif
 	case SDLK_MENU: return 0x32;
 	case SDLK_CAPSLOCK: return 0x39;
 	case SDLK_NUMLOCK: return 0x47;
@@ -1902,12 +1772,9 @@ static int event2keycode(SDL_KeyboardEvent const &ev, bool key_down)
  *  SDL event handling
  */
 
-#define SDL_N_EVENTS_PER_HANDLER 1
-
 static void handle_events(void)
 {
-	#ifndef EMSCRIPTEN
-	SDL_Event events[SDL_N_EVENTS_PER_HANDLER];
+	SDL_Event events[10];
 	const int n_max_events = sizeof(events) / sizeof(events[0]);
 	int n_events;
 
@@ -2038,11 +1905,7 @@ static void handle_events(void)
 			}
 		}
 	}
-
-	#endif
 }
-
-
 
 
 /*
@@ -2052,9 +1915,6 @@ static void handle_events(void)
 // Static display update (fixed frame rate, but incremental)
 static void update_display_static(driver_base *drv)
 {
-
-	printf("update_display_static\n");
-
 	// Incremental update code
 	int wide = 0, high = 0, x1, x2, y1, y2, i, j;
 	const VIDEO_MODE &mode = drv->mode;
@@ -2118,11 +1978,9 @@ static void update_display_static(driver_base *drv)
 			// Update copy of the_buffer
 			if (high && wide) {
 
-				#ifndef EMSCRIPTEN
 				// Lock surface, if required
 				if (SDL_MUSTLOCK(drv->s))
 					SDL_LockSurface(drv->s);
-				#endif
 
 				// Blit to screen surface
 				int si = y1 * src_bytes_per_row + (x1 / pixels_per_byte);
@@ -2134,14 +1992,12 @@ static void update_display_static(driver_base *drv)
 					di += dst_bytes_per_row;
 				}
 
-				#ifndef EMSCRIPTEN
 				// Unlock surface, if required
 				if (SDL_MUSTLOCK(drv->s))
 					SDL_UnlockSurface(drv->s);
 
 				// Refresh display
 				SDL_UpdateRect(drv->s, x1, y1, wide, high);
-				#endif
 			}
 
 		} else {
@@ -2201,60 +2057,14 @@ static void update_display_static(driver_base *drv)
 			}
 		}
 	}
-
-	#ifdef EMSCRIPTEN
-	// printf("macemuCopyFrameBuffer %p\n", the_buffer);
-	// EM_ASM_({
-	// 	macemuCopyFrameBuffer($0);
-	// }, the_buffer);
-	#endif
 }
 
 // Static display update (fixed frame rate, bounding boxes based)
 // XXX use NQD bounding boxes to help detect dirty areas?
 static void update_display_static_bbox(driver_base *drv)
 {
-
-	assert(Screen_blit);
 	const VIDEO_MODE &mode = drv->mode;
 
-#ifdef EMSCRIPTEN
-	// Update the surface from Mac screen
-	const int bytes_per_row = VIDEO_MODE_ROW_BYTES;
-	const int dst_bytes_per_row = drv->s->pitch;
-	uint32 size_to_copy = VIDEO_MODE_ROW_BYTES * VIDEO_MODE_Y;
-
-	if (REUSE_VIDEO_BUFFER) {
-#if DEBUG
-		printf("Screen_blit from the_buffer=%p to browser_pixels=%p of size=%u depth=%d\n",(void *)the_buffer, (void *)browser_pixels, size_to_copy, VIDEO_MODE_DEPTH);
-		EM_ASM_({
-	  	workerApi.summarizeBuffer($0, $1, $2, $3);
-		}, the_buffer, VIDEO_MODE_X, VIDEO_MODE_Y, 32);
-		assert(browser_pixels);
-#endif
-		uint8 *blit_buffer;
-		if (drv->is_raw_screen_blit) {
-			blit_buffer = the_buffer;
-		} else {
-			Screen_blit((uint8 *)browser_pixels, the_buffer, size_to_copy);
-			blit_buffer = browser_pixels;
-		}
-		uint64 hash = SpookyHash::Hash64(
-			blit_buffer, VIDEO_MODE_X * VIDEO_MODE_Y * 4, 0);
-		// Can't send the uin64 as is to JS, but we can turn it into a double
-		// (since all we care about are changes from one frame to the next).
-		double hash_double = *reinterpret_cast<double*>(&hash);
-		EM_ASM_({
-		workerApi.blit($0, $1, $2, $3, $4, $5);
-		}, blit_buffer, VIDEO_MODE_X, VIDEO_MODE_Y, 32, !IsDirectMode(mode), hash_double);
-	} else {
-		uint8 *pixels = (uint8 *)alloca(sizeof(uint8) * size_to_copy);
-		Screen_blit((uint8 *)pixels, the_buffer, size_to_copy);
-		EM_ASM_({
-	  	workerApi.blit($0, $1, $2, $3, $4);
-		}, pixels, VIDEO_MODE_X, VIDEO_MODE_Y, 32, !IsDirectMode(mode));
-	}
-#else
 	// Allocate bounding boxes for SDL_UpdateRects()
 	const int N_PIXELS = 64;
 	const int n_x_boxes = (VIDEO_MODE_X + N_PIXELS - 1) / N_PIXELS;
@@ -2301,15 +2111,6 @@ static void update_display_static_bbox(driver_base *drv)
 		}
 	}
 
-	// testing bad allocations
-	if (REUSE_VIDEO_BUFFER) {
-		uint32 size_to_copy = VIDEO_MODE_X * bytes_per_pixel * VIDEO_MODE_Y;
-		// uint8 *browser_pixels = drv->browser_pixels;
-
-		assert(browser_pixels);
-		Screen_blit((uint8 *)browser_pixels, the_buffer, size_to_copy);
-	}
-
 	// Unlock surface, if required
 	if (SDL_MUSTLOCK(drv->s))
 		SDL_UnlockSurface(drv->s);
@@ -2317,8 +2118,6 @@ static void update_display_static_bbox(driver_base *drv)
 	// Refresh display
 	if (nr_boxes)
 		SDL_UpdateRects(drv->s, nr_boxes, boxes);
-
-#endif
 }
 
 
@@ -2377,7 +2176,7 @@ static void video_refresh_dga_vosf(void)
 {
 	// Quit DGA mode if requested
 	possibly_quit_dga_mode();
-
+	
 	// Update display (VOSF variant)
 	static int tick_counter = 0;
 	if (++tick_counter >= frame_skip) {
@@ -2395,7 +2194,7 @@ static void video_refresh_window_vosf(void)
 {
 	// Ungrab mouse if requested
 	possibly_ungrab_mouse();
-
+	
 	// Update display (VOSF variant)
 	static int tick_counter = 0;
 	if (++tick_counter >= frame_skip) {
@@ -2411,7 +2210,6 @@ static void video_refresh_window_vosf(void)
 
 static void video_refresh_window_static(void)
 {
-
 	// Ungrab mouse if requested
 	possibly_ungrab_mouse();
 
@@ -2420,14 +2218,10 @@ static void video_refresh_window_static(void)
 	if (++tick_counter >= frame_skip) {
 		tick_counter = 0;
 		const VIDEO_MODE &mode = drv->mode;
-#if EMSCRIPTEN
-		update_display_static_bbox(drv);
-#else
 		if ((int)VIDEO_MODE_DEPTH >= VIDEO_DEPTH_8BIT)
 			update_display_static_bbox(drv);
 		else
 			update_display_static(drv);
-#endif
 	}
 }
 
@@ -2459,10 +2253,8 @@ static void VideoRefreshInit(void)
 
 static inline void do_video_refresh(void)
 {
-	#ifndef EMSCRIPTEN
 	// Handle SDL events
 	handle_events();
-	#endif
 
 	// Update display
 	video_refresh();

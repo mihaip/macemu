@@ -808,7 +808,7 @@ if [[ "x$HAVE_PTHREADS" = "xno" ]]; then
 fi
 
 if [[ "x$WANT_EMSCRIPTEN" = "xyes" ]]; then
-  VIDEOSRCS=JS/video_js.cpp
+  VIDEOSRCS="JS/video_js.cpp SpookyV2.cpp"
   SCSISRC=../dummy/scsi_dummy.cpp
   ETHERSRC=JS/ether_js.cpp
   EXTRASYSSRCS="$EXTRASYSSRCS JS/input_js.cpp JS/clip_js.cpp"
