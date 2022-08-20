@@ -10,6 +10,7 @@ set -euo pipefail
   --disable-jit-compiler \
   --enable-addressing="banks" \
   --disable-vosf \
+  --build="`uname -m`-unknown-linux-gnu" \
   --cache-file=/tmp/config.cache.native
 
 make clean

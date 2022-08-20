@@ -38,6 +38,7 @@ export LDFLAGS="-L/opt/X11/lib $em_flags $em_ldflags"
   --enable-sdl-video \
   --disable-vosf \
   --enable-emscripten \
+  --build="`uname -m`-unknown-linux-gnu" \
   --cache-file=/tmp/config.cache.emscripten
 
 cat ./em_config.h >> ./config.h
