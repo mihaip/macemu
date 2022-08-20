@@ -256,7 +256,7 @@ else
 fi
 
 dnl We need X11, if not using SDL.
-if [[ "x$WANT_SDL_VIDEO" = "xno" ]]; then
+if [[ "x$WANT_SDL_VIDEO" = "xno" -a "x$WANT_EMSCRIPTEN" = "xno" ]]; then
   AC_PATH_XTRA
   if [[ "x$no_x" = "xyes" ]]; then
     AC_MSG_ERROR([You need X11 to run Basilisk II.])
@@ -759,8 +759,6 @@ if [[ "x$WANT_SDL_VIDEO" = "xyes" ]]; then
     fi
     EXTRASYSSRCS="$EXTRASYSSRCS ../MacOSX/utils_macosx.mm"
     CPPFLAGS="$CPPFLAGS -I../MacOSX"
-  elif [[ "x$WANT_EMSCRIPTEN" = "xyes" ]]; then
-      EXTRASYSSRCS="$EXTRASYSSRCS JS/clip_js.cpp"
   else
     case "$target_os" in
     cygwin*)
@@ -771,7 +769,7 @@ if [[ "x$WANT_SDL_VIDEO" = "xyes" ]]; then
       ;;
     esac
   fi
-elif [[ "x$WANT_MACOSX_GUI" != "xyes" ]]; then
+elif [[ "x$WANT_MACOSX_GUI" != "xyes" -a "x$WANT_EMSCRIPTEN" = "xno" ]]; then
   VIDEOSRCS="video_x.cpp"
   KEYCODES="keycodes"
   EXTRASYSSRCS="$EXTRASYSSRCS clip_unix.cpp"
@@ -810,9 +808,10 @@ if [[ "x$HAVE_PTHREADS" = "xno" ]]; then
 fi
 
 if [[ "x$WANT_EMSCRIPTEN" = "xyes" ]]; then
+  VIDEOSRCS=JS/video_js.cpp
   SCSISRC=../dummy/scsi_dummy.cpp
   ETHERSRC=JS/ether_js.cpp
-  EXTRASYSSRCS="$EXTRASYSSRCS JS/input_js.cpp"
+  EXTRASYSSRCS="$EXTRASYSSRCS JS/input_js.cpp JS/clip_js.cpp"
   dnl Using hacked version of audio_oss_esd
   AUDIOSRC=audio_oss_esd.cpp
 fi

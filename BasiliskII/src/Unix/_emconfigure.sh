@@ -23,9 +23,9 @@ export CXX="em++"
 export AR="emar"
 export EMSCRIPTEN=1
 export DEFINES=$em_defines
-export CFLAGS="-I/opt/X11/include -Iem_config.h $em_flags -g"
-export CPPFLAGS="-I/opt/X11/include $em_flags -g"
-export LDFLAGS="-L/opt/X11/lib $em_flags $em_ldflags"
+export CFLAGS="$em_flags -g"
+export CPPFLAGS="$em_flags -g"
+export LDFLAGS="$em_flags $em_ldflags"
 
 ./autogen.sh \
   --without-esd \
@@ -35,7 +35,6 @@ export LDFLAGS="-L/opt/X11/lib $em_flags $em_ldflags"
   --disable-xf86-dga \
   --disable-jit-compiler \
   --enable-addressing="banks" \
-  --enable-sdl-video \
   --disable-vosf \
   --enable-emscripten \
   --build="`uname -m`-unknown-linux-gnu" \

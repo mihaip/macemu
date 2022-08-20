@@ -29,7 +29,7 @@
 # include <SDL.h>
 #endif
 
-#ifndef USE_SDL_VIDEO
+#if !defined(USE_SDL_VIDEO) && !defined(EMSCRIPTEN)
 # include <X11/Xlib.h>
 #endif
 
@@ -137,7 +137,7 @@ bool TwentyFourBitAddressing;
 
 
 // Global variables
-#ifndef USE_SDL_VIDEO
+#if !defined(USE_SDL_VIDEO) && !defined(EMSCRIPTEN)
 extern char *x_display_name;						// X11 display name
 extern Display *x_display;							// X11 display handle
 #ifdef X11_LOCK_TYPE
@@ -418,7 +418,7 @@ int main(int argc, char **argv)
 	for (int i=1; i<argc; i++) {
 		if (strcmp(argv[i], "--help") == 0) {
 			usage(argv[0]);
-#ifndef USE_SDL_VIDEO
+#if !defined(USE_SDL_VIDEO) && !defined(EMSCRIPTEN)
 		} else if (strcmp(argv[i], "--display") == 0) {
 			i++; // don't remove the argument, gtk_init() needs it too
 			if (i < argc)
@@ -497,7 +497,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-#ifndef USE_SDL_VIDEO
+#if !defined(USE_SDL_VIDEO) && !defined(EMSCRIPTEN)
 	// Open display
 	x_display = XOpenDisplay(x_display_name);
 	if (x_display == NULL) {
@@ -927,7 +927,7 @@ void QuitEmulator(void)
 	PrefsExit();
 
 	// Close X11 server connection
-#ifndef USE_SDL_VIDEO
+#if !defined(USE_SDL_VIDEO) && !defined(EMSCRIPTEN)
 	if (x_display)
 		XCloseDisplay(x_display);
 #endif
