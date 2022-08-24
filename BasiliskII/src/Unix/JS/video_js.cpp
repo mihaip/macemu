@@ -31,6 +31,7 @@ private:
   uint8 *browser_framebuffer;
   size_t browser_framebuffer_size;
 	bool is_raw_screen_blit;
+  uint64 last_blit_hash;
 };
 
 void JS_monitor_desc::switch_to_current_mode()
@@ -72,12 +73,10 @@ bool JS_monitor_desc::video_open()
 
 	is_raw_screen_blit = !Screen_blitter_init(visualFormat, true, 1 << (mode.depth & 0x0f));
 	D(bug(" is_raw_screen_blit=%s\n", is_raw_screen_blit ? "true" : "false"));
-  if (!is_raw_screen_blit) {
-    browser_framebuffer_size = mode.y * 4 * mode.x;
-    browser_framebuffer = (uint8 *)malloc(browser_framebuffer_size);
-    if (browser_framebuffer == NULL) {
-      return false;
-    }
+  browser_framebuffer_size = mode.y * 4 * mode.x;
+  browser_framebuffer = (uint8 *)malloc(browser_framebuffer_size);
+  if (browser_framebuffer == NULL) {
+    return false;
   }
 
   EM_ASM_({
@@ -91,37 +90,36 @@ void JS_monitor_desc::video_close()
 {
 	D(bug("video_close()\n"));
   free(mac_framebuffer);
-  if (browser_framebuffer) {
-    free(browser_framebuffer);
-    browser_framebuffer = NULL;
-  }
+  free(browser_framebuffer);
 }
 
 void JS_monitor_desc::video_blit() {
 	const video_mode &mode = get_current_mode();
 
-  uint8 *blit_buffer;
-  size_t blit_buffer_size;
+  uint64 hash = SpookyHash::Hash64(mac_framebuffer, mode.x * mode.y * 4, 0);
+  if (hash == last_blit_hash) {
+    // Screen has not changed, but we still let the JS know so that it can
+    // keep track of screen refreshes when deciding how long to idle for.
+    EM_ASM({ workerApi.blit(0, 0); });
+    return;
+  }
+  last_blit_hash = hash;
+
   if (is_raw_screen_blit) {
-    blit_buffer = mac_framebuffer;
-    blit_buffer_size = mac_framebuffer_size;
+    // Offset by 1 to go from ARGB to RGBA (we don't actually care about the
+    // alpha, it should be the same for all pixels)
+    memcpy(browser_framebuffer, mac_framebuffer + 1, mac_framebuffer_size - 1);
     // Ensure that alpha is set, the Mac defaults to it being 0, which the
     // browser renders as transparent.
-    for (size_t i = 0; i < mode.bytes_per_row * mode.y; i += 4) {
-      mac_framebuffer[i] = 0xff;
+    for (size_t i = 3; i < mac_framebuffer_size; i += 4) {
+      browser_framebuffer[i] = 0xff;
     }
   } else {
     Screen_blit(browser_framebuffer, mac_framebuffer, mac_framebuffer_size);
-    blit_buffer = browser_framebuffer;
-    blit_buffer_size = browser_framebuffer_size;
   }
-  uint64 hash = SpookyHash::Hash64(blit_buffer, mode.x * mode.y * 4, 0);
-  // Can't send the uin64 as is to JS, but we can turn it into a double
-  // (since all we care about are changes from one frame to the next).
-  double hash_double = *reinterpret_cast<double*>(&hash);
   EM_ASM_({
-    workerApi.blit($0, $1, $2, $3, $4, $5);
-  }, blit_buffer, blit_buffer_size, !IsDirectMode(mode), hash_double);
+    workerApi.blit($0, $1);
+  }, browser_framebuffer, browser_framebuffer_size);
 }
 
 void JS_monitor_desc::set_palette(uint8 *pal, int num_in)
