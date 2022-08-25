@@ -1,6 +1,7 @@
 #include "sysdeps.h"
 
 #include <emscripten.h>
+
 #include <map>
 
 #include "cpu_emulation.h"
@@ -19,10 +20,9 @@ static std::map<uint16, uint32> net_protocols;
 
 // Use stringified form of MAC address on the JS side, so that it's easier to
 // debug.
-static void ether_addr_to_str(uint8 *ether_addr, char *ether_addr_str) {
-  sprintf(ether_addr_str, "%02x:%02x:%02x:%02x:%02x:%02x", ether_addr[0],
-          ether_addr[1], ether_addr[2], ether_addr[3], ether_addr[4],
-          ether_addr[5]);
+static void ether_addr_to_str(uint8* ether_addr, char* ether_addr_str) {
+  sprintf(ether_addr_str, "%02x:%02x:%02x:%02x:%02x:%02x", ether_addr[0], ether_addr[1],
+          ether_addr[2], ether_addr[3], ether_addr[4], ether_addr[5]);
 }
 
 // Dispatch packet to protocol handler
@@ -47,23 +47,20 @@ static void ether_dispatch_packet(uint32 p, uint32 length) {
   // Copy header to RHA
   Mac2Mac_memcpy(ether_data + ed_RHA, p, 14);
   D(bug(" header %08x%04x %08x%04x %04x\n", ReadMacInt32(ether_data + ed_RHA),
-        ReadMacInt16(ether_data + ed_RHA + 4),
-        ReadMacInt32(ether_data + ed_RHA + 6),
-        ReadMacInt16(ether_data + ed_RHA + 10),
-        ReadMacInt16(ether_data + ed_RHA + 12)));
+        ReadMacInt16(ether_data + ed_RHA + 4), ReadMacInt32(ether_data + ed_RHA + 6),
+        ReadMacInt16(ether_data + ed_RHA + 10), ReadMacInt16(ether_data + ed_RHA + 12)));
 
   // Call protocol handler
   M68kRegisters r;
-  r.d[0] = type; // Packet type
-  r.d[1] =
-      length - 14; // Remaining packet length (without header, for ReadPacket)
-  r.a[0] = p + 14; // Pointer to packet (Mac address, for ReadPacket)
-  r.a[3] = ether_data + ed_RHA + 14; // Pointer behind header in RHA
-  r.a[4] =
-      ether_data + ed_ReadPacket; // Pointer to ReadPacket/ReadRest routines
-  D(bug(" calling protocol handler %08x, type %08x, length %08x, data %08x, "
-        "rha %08x, read_packet %08x\n",
-        handler, r.d[0], r.d[1], r.a[0], r.a[3], r.a[4]));
+  r.d[0] = type;                        // Packet type
+  r.d[1] = length - 14;                 // Remaining packet length (without header, for ReadPacket)
+  r.a[0] = p + 14;                      // Pointer to packet (Mac address, for ReadPacket)
+  r.a[3] = ether_data + ed_RHA + 14;    // Pointer behind header in RHA
+  r.a[4] = ether_data + ed_ReadPacket;  // Pointer to ReadPacket/ReadRest routines
+  D(
+      bug(" calling protocol handler %08x, type %08x, length %08x, data %08x, "
+          "rha %08x, read_packet %08x\n",
+          handler, r.d[0], r.d[1], r.a[0], r.a[3], r.a[4]));
   Execute68k(handler, &r);
 }
 
@@ -145,8 +142,7 @@ int16 ether_write(uint32 wds) {
     return eMultiErr;
   }
 
-  EM_ASM_({ workerApi.etherWrite(UTF8ToString($0), $1, $2); },
-          dest_ether_addr_str, packet, len);
+  EM_ASM_({ workerApi.etherWrite(UTF8ToString($0), $1, $2); }, dest_ether_addr_str, packet, len);
 
   return noErr;
 }
@@ -165,8 +161,7 @@ void EtherInterrupt(void) {
   uint32 packet = ether_packet.addr();
 
   while (true) {
-    int length = EM_ASM_INT({ return workerApi.etherRead($0, 1514); },
-                            Mac2HostAddr(packet));
+    int length = EM_ASM_INT({ return workerApi.etherRead($0, 1514); }, Mac2HostAddr(packet));
     if (length < 14) {
       return;
     }
