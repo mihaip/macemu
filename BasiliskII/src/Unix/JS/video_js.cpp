@@ -143,7 +143,7 @@ bool VideoInit(bool classic) {
   // default to a 512x342 1-bit display, but we ignore that.
   int default_width = 640;
   int default_height = 480;
-  int default_depth = VIDEO_DEPTH_32BIT;
+  int default_depth = VIDEO_DEPTH_8BIT;
   const char* mode_str = PrefsFindString("screen");
   if (mode_str) {
     if (sscanf(mode_str, "win/%d/%d", &default_width, &default_height) != 2)
@@ -174,7 +174,7 @@ bool VideoInit(bool classic) {
     if (i > 0 && (w >= default_width || h >= default_height)) {
       continue;
     }
-    for (int d = VIDEO_DEPTH_1BIT; d <= default_depth; d++) {
+    for (int d = VIDEO_DEPTH_1BIT; d <= VIDEO_DEPTH_32BIT; d++) {
       video_mode mode;
       mode.x = w;
       mode.y = h;
