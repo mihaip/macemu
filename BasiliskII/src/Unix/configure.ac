@@ -811,9 +811,8 @@ if [[ "x$WANT_EMSCRIPTEN" = "xyes" ]]; then
   VIDEOSRCS="JS/video_js.cpp SpookyV2.cpp"
   SCSISRC=../dummy/scsi_dummy.cpp
   ETHERSRC=JS/ether_js.cpp
+  AUDIOSRC=JS/audio_js.cpp
   EXTRASYSSRCS="$EXTRASYSSRCS JS/input_js.cpp JS/clip_js.cpp"
-  dnl Using hacked version of audio_oss_esd
-  AUDIOSRC=audio_oss_esd.cpp
 fi
 
 SYSSRCS="$VIDEOSRCS $EXTFSSRC $SERIALSRC $ETHERSRC $SCSISRC $AUDIOSRC $SEMSRC $UISRCS $MONSRCS $EXTRASYSSRCS"

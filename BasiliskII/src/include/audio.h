@@ -60,8 +60,6 @@ extern void audio_set_main_volume(uint32 vol);
 extern void audio_set_speaker_mute(bool mute);
 extern void audio_set_speaker_volume(uint32 vol);
 
-extern void audio_write_blocks(int blocks_to_write);
-
 // Current audio status
 struct audio_status {
 	uint32 sample_rate;		// 16.16 fixed point

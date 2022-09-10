@@ -37,10 +37,6 @@
 # include <pthread.h>
 #endif
 
-#if defined(EMSCRIPTEN) && !defined(__EMSCRIPTEN_PTHREADS__)
-# include <audio.h>
-#endif
-
 #if REAL_ADDRESSING || DIRECT_ADDRESSING
 # include <sys/mman.h>
 #endif
@@ -95,6 +91,7 @@ using std::string;
 #ifdef EMSCRIPTEN
 #include <emscripten.h>
 #include "JS/input_js.h"
+#include "JS/audio_js.h"
 #endif
 
 
@@ -1194,7 +1191,7 @@ static void one_tick(...)
 #if defined(EMSCRIPTEN)
 	// tuned (badly) for sr=22050 blocksize=4096
 	if ((tick_counter) % 11 == 0) {
-		audio_write_blocks(1);
+		AudioWriteBlocks(1);
 	}
 #endif
 
