@@ -3,6 +3,6 @@
 
 #include "sysdeps.h"
 
-void AudioWriteBlocks(int blocks_to_write);
+void AudioRefresh();
 
 #endif

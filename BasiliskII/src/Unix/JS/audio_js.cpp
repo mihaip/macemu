@@ -18,7 +18,7 @@ static int audio_channel_count_index = 0;
 
 // Global variables
 static int sound_buffer_size;  // Size of sound buffer in bytes
-static uint8 silence_byte;     // Byte value to use to fill sound buffers with silence
+static int16* sound_buffer = NULL;
 
 // Set AudioStatus to reflect current audio stream format
 static void set_audio_status_format(void) {
@@ -28,7 +28,6 @@ static void set_audio_status_format(void) {
 }
 
 static bool open_audio(void) {
-  silence_byte = 0;  // Is this correct for 8-bit mode?
   // JS supports a variety of twisted little audio formats, all different
   if (audio_sample_sizes.empty()) {
     // The reason we do this here is that we don't want to add sample
@@ -59,6 +58,10 @@ static bool open_audio(void) {
 
   sound_buffer_size = (audio_sample_sizes[audio_sample_size_index] >> 3) *
                       audio_channel_counts[audio_channel_count_index] * audio_frames_per_block;
+  if (sound_buffer) {
+    delete[] sound_buffer;
+  }
+  sound_buffer = new int16[sound_buffer_size / 2];
   set_audio_status_format();
 
   audio_open = true;
@@ -67,10 +70,10 @@ static bool open_audio(void) {
 
 static void close_audio(void) {
   audio_open = false;
-}
-
-static ssize_t audio_write(const void* buf, size_t buf_nbytes) {
-  return EM_ASM_INT({ return workerApi.enqueueAudio($0, $1); }, buf, buf_nbytes);
+  if (sound_buffer) {
+    delete[] sound_buffer;
+    sound_buffer = NULL;
+  }
 }
 
 void AudioInit(void) {
@@ -109,15 +112,40 @@ void audio_exit_stream() {
  */
 void AudioInterrupt(void) {
   // Get data from apple mixer
-  if (AudioStatus.mixer) {
-    M68kRegisters r;
-    r.a[0] = audio_data + adatStreamInfo;
-    r.a[1] = AudioStatus.mixer;
-    Execute68k(audio_data + adatGetSourceData, &r);
-    D(bug(" GetSourceData() returns %08lx\n", r.d[0]));
-  } else {
+  if (!AudioStatus.mixer) {
     WriteMacInt32(audio_data + adatStreamInfo, 0);
+    return;
   }
+
+  M68kRegisters r;
+  r.a[0] = audio_data + adatStreamInfo;
+  r.a[1] = AudioStatus.mixer;
+  Execute68k(audio_data + adatGetSourceData, &r);
+  D(bug(" GetSourceData() returns %08lx\n", r.d[0]));
+
+  uint32 apple_stream_info = ReadMacInt32(audio_data + adatStreamInfo);
+  if (!apple_stream_info) {
+    return;
+  }
+  int sample_count = ReadMacInt32(apple_stream_info + scd_sampleCount);
+  if (sample_count == 0) {
+    return;
+  }
+  int work_size = sample_count * (AudioStatus.sample_size >> 3) * AudioStatus.channels;
+  D(bug("stream: work_size %d\n", work_size));
+  if (work_size > sound_buffer_size) {
+    D(bug("  work_size (%d) > sound_buffer_size (%d), truncating\n", work_size, sound_buffer_size));
+    work_size = sound_buffer_size;
+  }
+
+  int16* p = (int16*)Mac2HostAddr(ReadMacInt32(apple_stream_info + scd_buffer));
+  for (int i = 0; i < work_size / 2; i++) {
+    sound_buffer[i] = ntohs(p[i]);
+  }
+  // Fill remaining buffer with silence.
+  memset((uint8*)sound_buffer + work_size, 0, sound_buffer_size - work_size);
+  EM_ASM_INT({ return workerApi.enqueueAudio($0, $1); }, sound_buffer, sound_buffer_size);
+  D(bug("stream: data written\n"));
 }
 
 bool audio_set_sample_rate(int index) {
@@ -175,75 +203,8 @@ void audio_set_speaker_volume(uint32 vol) {
   // TODO
 }
 
-static int blocks_to_skip = 0;
-
-void AudioWriteBlocks(int blocks_to_write) {
-  while (blocks_to_skip > 0 && blocks_to_write > 0) {
-    blocks_to_write--;
-    blocks_to_skip--;
-  }
-  if (blocks_to_write == 0) {
-    return;
-  }
-
-  int failed_to_write = false;
-  size_t bytes_written = 0;
-  int blocks_written = 0;
-
-  int16* silent_buffer = new int16[sound_buffer_size / 2];
-  int16* last_buffer = new int16[sound_buffer_size / 2];
-  memset(silent_buffer, silence_byte, sound_buffer_size);
-
-  while (blocks_written < blocks_to_write) {
-    if (AudioStatus.num_sources) {
-      // Trigger audio interrupt to get new buffer
-      D(bug("stream: triggering irq\n"));
-      SetInterruptFlag(INTFLAG_AUDIO);
-      TriggerInterrupt();
-      D(bug("stream: waiting for ack\n"));
-      // TODO: should we wait for the interrupt to run?
-      D(bug("stream: ack received\n"));
-
-      // Get size of audio data
-      uint32 apple_stream_info = ReadMacInt32(audio_data + adatStreamInfo);
-      if (apple_stream_info) {
-        int work_size = ReadMacInt32(apple_stream_info + scd_sampleCount) *
-                        (AudioStatus.sample_size >> 3) * AudioStatus.channels;
-        D(bug("stream: work_size %d\n", work_size));
-        if (work_size > sound_buffer_size) {
-          work_size = sound_buffer_size;
-        }
-        if (work_size == 0) {
-          goto silence;
-        }
-
-        int16* p = (int16*)Mac2HostAddr(ReadMacInt32(apple_stream_info + scd_buffer));
-        for (int i = 0; i < work_size / 2; i++) {
-          last_buffer[i] = ntohs(p[i]);
-        }
-        memset((uint8*)last_buffer + work_size, silence_byte, sound_buffer_size - work_size);
-        bytes_written = audio_write(last_buffer, sound_buffer_size);
-        D(bug("stream: data written\n"));
-      } else
-        goto silence;
-
-    } else {
-      // Audio not active, play silence
-    silence:
-      bytes_written = audio_write(silent_buffer, sound_buffer_size);
-
-      D(bug("stream: silence written\n"));
-    }
-    if (bytes_written == 0) {
-      failed_to_write = true;
-      break;
-    }
-    blocks_written++;
-  }
-  delete[] silent_buffer;
-  delete[] last_buffer;
-
-  if (failed_to_write) {
-    blocks_to_skip = 3;
+void AudioRefresh() {
+  if (AudioStatus.num_sources) {
+    SetInterruptFlag(INTFLAG_AUDIO);
   }
 }

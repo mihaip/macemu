@@ -349,9 +349,11 @@ void cpu_do_check_ticks(void)
 	// Check for interrupt opportunity
 	now = GetTicks_usec();
 	if (next < now) {
+#ifdef EMSCRIPTEN
 		if (!js_frequent_read_input) {
 			ReadJSInput();
 		}
+#endif
 		one_tick();
 		do {
 			next += 16625;
@@ -1190,8 +1192,8 @@ static void one_tick(...)
 
 #if defined(EMSCRIPTEN)
 	// tuned (badly) for sr=22050 blocksize=4096
-	if ((tick_counter) % 11 == 0) {
-		AudioWriteBlocks(1);
+	if (tick_counter % 11 == 0) {
+		AudioRefresh();
 	}
 #endif
 
