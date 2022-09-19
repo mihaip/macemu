@@ -19,7 +19,9 @@ class JS_monitor_desc : public monitor_desc {
   JS_monitor_desc(const vector<video_mode>& available_modes,
                   video_depth default_depth,
                   uint32 default_id)
-      : monitor_desc(available_modes, default_depth, default_id) {}
+      : monitor_desc(available_modes, default_depth, default_id),
+        last_blit_hash(0),
+        last_palette_hash(0) {}
   ~JS_monitor_desc() {}
 
   virtual void switch_to_current_mode();
@@ -36,6 +38,7 @@ class JS_monitor_desc : public monitor_desc {
   size_t browser_framebuffer_size;
   bool is_raw_screen_blit;
   uint64 last_blit_hash;
+  uint64 last_palette_hash;
 };
 
 void JS_monitor_desc::switch_to_current_mode() {
@@ -97,6 +100,9 @@ void JS_monitor_desc::video_blit() {
   const video_mode& mode = get_current_mode();
 
   uint64 hash = SpookyHash::Hash64(mac_framebuffer, mode.x * mode.y * 4, 0);
+  if (!is_raw_screen_blit) {
+    hash ^= last_palette_hash;
+  }
   if (hash == last_blit_hash) {
     // Screen has not changed, but we still let the JS know so that it can
     // keep track of screen refreshes when deciding how long to idle for.
@@ -133,6 +139,7 @@ void JS_monitor_desc::set_palette(uint8* pal, int num_in) {
       uint8 blue = pal[c * 3 + 2];
       ExpandMap[i] = red | green << 8 | blue << 16 | 0xff000000;
     }
+    last_palette_hash = SpookyHash::Hash64(pal, num_in * 3, 0);
   }
 }
 
