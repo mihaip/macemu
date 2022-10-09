@@ -283,7 +283,7 @@ uint32 get_rfork_size(const char *path)
 
 	// Get size
 	off_t size = lseek(fd, 0, SEEK_END);
-
+	
 	// Close file and return size
 	close(fd);
 	return size < 0 ? 0 : size;
