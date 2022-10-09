@@ -1321,7 +1321,7 @@ else
       ;;
     direct)
       dnl Requires VOSF screen updates
-      if [[ "x$CAN_VOSF" = "xyes" ]]; then
+      if [[ "x$CAN_VOSF" = "xyes" -o "x$WANT_EMSCRIPTEN" = "xyes" ]]; then
         ADDRESSING_MODE="direct"
         WANT_VOSF=yes dnl we can use VOSF and we need it actually
         DEFINES="$DEFINES -DDIRECT_ADDRESSING"

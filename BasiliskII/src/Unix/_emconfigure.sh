@@ -12,6 +12,7 @@ em_defines=""
 if [[ -z "${macemujs_conf_debug:-}" ]]; then
   em_flags+=" -O3 -gsource-map"
 else
+  echo "Debug build"
   em_flags+=" -O0 -gsource-map"
   em_ldflags+=" -s ASSERTIONS=2 "
   em_ldflags+=" -s DEMANGLE_SUPPORT=1"
@@ -34,11 +35,10 @@ export LDFLAGS="$em_flags $em_ldflags"
   --disable-xf86-vidmode \
   --disable-xf86-dga \
   --disable-jit-compiler \
-  --enable-addressing="banks" \
   --disable-vosf \
   --enable-emscripten \
   --build="`uname -m`-unknown-linux-gnu" \
-  --cache-file=/tmp/config.cache.emscripten
+  --cache-file="/tmp/config.cache.emscripten${macemujs_conf_debug:-}"
 
 cat ./em_config.h >> ./config.h
 

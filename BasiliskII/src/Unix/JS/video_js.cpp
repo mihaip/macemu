@@ -64,10 +64,7 @@ bool JS_monitor_desc::video_open() {
     return false;
   }
 
-  set_mac_frame_base(MacFrameBaseMac);
-  MacFrameBaseHost = mac_framebuffer;
-  MacFrameSize = mode.bytes_per_row * mode.y;
-  MacFrameLayout = FLAYOUT_DIRECT;
+  set_mac_frame_base((unsigned int)Host2MacAddr((uint8*)mac_framebuffer));
   InitFrameBufferMapping();
 
   VisualFormat visualFormat;
