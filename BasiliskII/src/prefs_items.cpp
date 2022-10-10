@@ -86,6 +86,9 @@ prefs_desc common_prefs_items[] = {
 	{"sound_buffer", TYPE_INT32, false,	"sound buffer length"},
 	{"name_encoding", TYPE_INT32, false,	"file name encoding"},
 	{"delay", TYPE_INT32, false,	"additional delay [uS] every 64k instructions"},
+	{"appletalk", TYPE_BOOLEAN, false, "enable AppleTalk in default PRAM"},
+	{"jsfrequentreadinput", TYPE_BOOLEAN, false, "Read JS input frequently (multiple times per tick) to reduce latency"},
+
 	{NULL, TYPE_END, false, NULL} // End of list
 };
 

@@ -38,6 +38,9 @@ AC_ARG_ENABLE(sdl-framework,    [  --enable-sdl-framework  use SDL framework [de
 AC_ARG_ENABLE(sdl-framework-prefix,    [  --enable-sdl-framework-prefix=PFX    default=/Library/Frameworks], [SDL_FRAMEWORK="$enableval"], [SDL_FRAMEWORK=/Library/Frameworks])
 AC_ARG_WITH(sdl1,            [  --with-sdl1             use SDL 1.x, rather than SDL 2.x [default=no]], [WANT_SDL_VERSION_MAJOR=1], [])
 
+dnl Emscripten options.
+AC_ARG_ENABLE(emscripten,     [  --enable-emscripten      Emscripten is the real target [default=no]], [WANT_EMSCRIPTEN=$enableval], [WANT_EMSCRIPTEN=no])
+
 dnl JIT compiler options.
 AC_ARG_ENABLE(jit-compiler,  [  --enable-jit-compiler   enable JIT compiler [default=yes]], [WANT_JIT=$enableval], [WANT_JIT=yes])
 AC_ARG_ENABLE(jit-debug,     [  --enable-jit-debug      activate native code disassemblers [default=no]], [WANT_JIT_DEBUG=$enableval], [WANT_JIT_DEBUG=no])
@@ -175,6 +178,9 @@ fi
 dnl Canonical system information.
 AC_CANONICAL_HOST
 AC_CANONICAL_TARGET
+
+
+AC_SUBST(EMSCRIPTEN, [$WANT_EMSCRIPTEN])
 
 dnl Target OS type (target is host if not cross-compiling).
 case "$target_os" in
@@ -359,7 +365,7 @@ else
 fi
 
 dnl We need X11, if not using SDL or Mac GUI.
-if [[ "x$WANT_SDL_VIDEO" = "xno" -a "x$WANT_MACOSX_GUI" = "xno" ]]; then
+if [[ "x$WANT_SDL_VIDEO" = "xno" -a "x$WANT_MACOSX_GUI" = "xno" -a "x$WANT_EMSCRIPTEN" = "xno" ]]; then
   AC_PATH_XTRA
   if [[ "x$no_x" = "xyes" ]]; then
     AC_MSG_ERROR([You need X11 to run Basilisk II.])
@@ -404,6 +410,9 @@ HAVE_PTHREADS=no
 AC_SEARCH_LIBS([pthread_create], [pthread npth c_r PTL], [
   HAVE_PTHREADS=yes
 ])
+if [[ "x$WANT_EMSCRIPTEN" = "xyes" ]]; then
+  HAVE_PTHREADS=no
+fi
 if [[ "x$HAVE_PTHREADS" = "xyes" ]]; then
   AC_DEFINE(HAVE_PTHREADS, 1, [Define if pthreads are available.])
 fi
@@ -738,7 +747,7 @@ ETHERSRC=../dummy/ether_dummy.cpp
 SCSISRC=../dummy/scsi_dummy.cpp
 AUDIOSRC=../dummy/audio_dummy.cpp
 EXTFSSRC=extfs_unix.cpp
-EXTRASYSSRCS=
+EXTRASYSSRCS=macroman.cpp
 CAN_NATIVE_M68K=no
 case "$target_os" in
 linux*)
@@ -901,7 +910,7 @@ if [[ "x$WANT_SDL_VIDEO" = "xyes" ]]; then
       LIBS="$LIBS -lX11"
     fi
   fi
-elif [[ "x$WANT_MACOSX_GUI" != "xyes" ]]; then
+elif [[ "x$WANT_MACOSX_GUI" != "xyes" -a "x$WANT_EMSCRIPTEN" = "xno" ]]; then
   VIDEOSRCS="video_x.cpp"
   KEYCODES="keycodes"
   EXTRASYSSRCS="$EXTRASYSSRCS clip_unix.cpp"
@@ -938,6 +947,15 @@ if [[ "x$HAVE_PTHREADS" = "xno" ]]; then
   ETHERSRC=../dummy/ether_dummy.cpp
   AUDIOSRC=../dummy/audio_dummy.cpp
 fi
+
+if [[ "x$WANT_EMSCRIPTEN" = "xyes" ]]; then
+  VIDEOSRCS="JS/video_js.cpp SpookyV2.cpp"
+  SCSISRC=../dummy/scsi_dummy.cpp
+  ETHERSRC=JS/ether_js.cpp
+  AUDIOSRC=JS/audio_js.cpp
+  EXTRASYSSRCS="$EXTRASYSSRCS JS/input_js.cpp JS/clip_js.cpp"
+fi
+
 SYSSRCS="$VIDEOSRCS $EXTFSSRC $SERIALSRC $ETHERSRC $SCSISRC $AUDIOSRC $SEMSRC $UISRCS $MONSRCS $EXTRASYSSRCS"
 
 dnl Define a macro that translates a yesno-variable into a C macro definition
@@ -1033,7 +1051,7 @@ dnl Various checks if the system supports mmap() and the like functions.
 dnl ... and Mach memory allocators are not supported
 have_mmap_vm=no
 if [[ "x$ac_cv_func_mmap" = "xyes" -a "x$ac_cv_func_munmap" = "xyes" -a \
-      "x$ac_cv_func_mprotect" = "xyes" ]]; then
+      "x$ac_cv_func_mprotect" = "xyes" -a "x$WANT_EMSCRIPTEN" = "xno" ]] ; then
   if [[ "x$have_mach_vm" = "xno" ]]; then
     have_mmap_vm=yes
   fi
@@ -1453,7 +1471,7 @@ else
       ;;
     direct)
       dnl Requires VOSF screen updates
-      if [[ "x$CAN_VOSF" = "xyes" ]]; then
+      if [[ "x$CAN_VOSF" = "xyes" -o "x$WANT_EMSCRIPTEN" = "xyes" ]]; then
         ADDRESSING_MODE="direct"
         WANT_VOSF=yes dnl we can use VOSF and we need it actually
         DEFINES="$DEFINES -DDIRECT_ADDRESSING"
@@ -1547,7 +1565,7 @@ dnl As of 2001/08/02, this affects the following compilers:
 dnl Official: probably gcc-3.1 (mainline CVS)
 dnl Mandrake: gcc-2.96 >= 0.59mdk, gcc-3.0.1 >= 0.1mdk
 dnl Red Hat : gcc-2.96 >= 89, gcc-3.0 >= 1
-if [[ "x$HAVE_GCC27" = "xyes" -a "x$HAVE_ICC" = "xno" ]]; then
+if [[ "x$HAVE_GCC27" = "xyes" -a "x$HAVE_ICC" = "xno" -a "x$WANT_EMSCRIPTEN" = "xno" ]]; then
   SAVED_CXXFLAGS="$CXXFLAGS"
   CXXFLAGS="$CXXFLAGS -fno-merge-constants"
   AC_CACHE_CHECK([whether GCC supports constants merging], ac_cv_gcc_constants_merging, [
@@ -1563,7 +1581,7 @@ fi
 
 dnl Store motion was introduced in 3.3-hammer branch and any gcc >= 3.4
 dnl However, there are some corner cases exposed on x86-64
-if [[ "x$HAVE_GCC27" = "xyes" -a "x$HAVE_ICC" = "xno" ]]; then
+if [[ "x$HAVE_GCC27" = "xyes" -a "x$HAVE_ICC" = "xno" -a "x$WANT_EMSCRIPTEN" = "xno" ]]; then
   SAVED_CXXFLAGS="$CXXFLAGS"
   CXXFLAGS="$CXXFLAGS -fno-gcse-sm"
   AC_CACHE_CHECK([whether GCC supports store motion], ac_cv_gcc_store_motion, [
@@ -1786,8 +1804,10 @@ struct possibility table [] =
   elif grep 'format:.BMHEXF.:tamrof' conftest.dmp >/dev/null 2>&1; then
     ac_cv_c_float_format='IBM 370 hex'
   else
-    AC_MSG_ERROR(Unknown floating point format)
-  fi],
+dnl AC_MSG_ERROR(Unknown floating point format)
+    ac_cv_c_float_format="IEEE (little-endian)"
+  fi
+  ],
   [AC_MSG_ERROR(compile failed)])
 ])
 # IEEE is the default format.  If the float endianness isn't the same
@@ -1944,5 +1964,6 @@ echo Floating-Point emulation core .......... : $FPE_CORE
 echo Assembly optimizations ................. : $ASM_OPTIMIZATIONS
 echo Addressing mode ........................ : $ADDRESSING_MODE
 echo Bad memory access recovery type ........ : $sigsegv_recovery
+echo Emscripten ............................. : $WANT_EMSCRIPTEN
 echo
 echo "Configuration done. Now type \"make\" (or \"gmake\")."

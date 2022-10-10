@@ -28,7 +28,7 @@ user_string_def platform_strings[] = {
 	{STR_VOLUME_IS_MOUNTED_WARN, "The volume '%s' is mounted under Unix. Basilisk II will try to unmount it."},
 	{STR_EXTFS_CTRL, "Unix Root"},
 	{STR_EXTFS_NAME, "Unix Directory Tree"},
-	{STR_EXTFS_VOLUME_NAME, "Unix"},
+	{STR_EXTFS_VOLUME_NAME, "The Outside World"},
 
 	// Purely platform-specific strings
 	{STR_NO_XSERVER_ERR, "Cannot connect to X server '%s'."},

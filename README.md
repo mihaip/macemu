@@ -1,92 +1,13 @@
-#### BasiliskII
-```
-macOS     x86_64 JIT / arm64 non-JIT
-Linux x86 x86_64 JIT / arm64 non-JIT
-MinGW x86        JIT
-```
-#### SheepShaver
-```
-macOS     x86_64 JIT / arm64 non-JIT
-Linux x86 x86_64 JIT / arm64 non-JIT
-MinGW x86        JIT
-```
-### How To Build
-These builds need to be installed SDL2.0.14+ framework/library.
+Fork of the Basilisk II Macintosh emulator modified to be compiled to WebAssembly and run in the browser. Part of the [Infinite Mac](https://github.com/mihaip/infinite-mac), see [its README](https://github.com/mihaip/infinite-mac/blob/main/README.md) and [introductory blog post](https://blog.persistent.info/2022/03/blog-post.html) for more details.
 
-https://www.libsdl.org
-#### BasiliskII
-##### macOS
-preparation:
+Based on [James Friend's original browser port of Basilisk II](https://jamesfriend.com.au/basilisk-ii-classic-mac-emulator-in-the-browser).
 
-Download gmp-6.2.1.tar.xz from https://gmplib.org.
-```
-$ cd ~/Downloads
-$ tar xf gmp-6.2.1.tar.xz
-$ cd gmp-6.2.1
-$ ./configure --disable-shared
-$ make
-$ make check
-$ sudo make install
-```
-Download mpfr-4.1.0.tar.xz from https://www.mpfr.org.
-```
-$ cd ~/Downloads
-$ tar xf mpfr-4.1.0.tar.xz
-$ cd mpfr-4.1.0
-$ ./configure --disable-shared
-$ make
-$ make check
-$ sudo make install
-```
-On an Intel Mac, change the `configure` command for both GMP and MPFR as follows, and ignore the `make check` command:
-```
-CFLAGS="-arch arm64" CXXFLAGS="$CFLAGS" ./configure -host=aarch64-apple-darwin --disable-shared 
-```
-(from https://github.com/kanjitalk755/macemu/pull/96)
+## How It Works
 
-build:
-```
-$ cd macemu/BasiliskII/src/MacOSX
-$ xcodebuild build -project BasiliskII.xcodeproj -configuration Release
-```
-or same as Linux
+The [TECH](BasiliskII/TECH) document describes the basic Basilisk II architecture. The WebAssembly port ends up being a modified Unix version, with a subset of [Unix implementations](BasiliskII/src/Unix) of Basilisk II parts are replaced with [JavaScript-based ones](BasiliskII/src/Unix/JS). They generally use the [ES_ASM()](https://emscripten.org/docs/porting/connecting_cpp_and_javascript/Interacting-with-code.html#interacting-with-code-call-javascript-from-native) macros to call into JavaScript code, with `EmulatorWorkerApi` in the [infinite-mac repo](https://github.com/mihaip/infinite-mac/blob/main/src/BasiliskII/emulator-worker.ts) serving as the receiving endpoint.
 
-##### Linux
-preparation (arm64 only): Install GMP and MPFR.
-```
-$ cd macemu/BasiliskII/src/Unix
-$ ./autogen.sh
-$ make
-```
-##### MinGW32/MSYS2
-```
-$ cd macemu/BasiliskII/src/Windows
-$ ../Unix/autogen.sh
-$ make
-```
-#### SheepShaver
-##### macOS
-```
-$ cd macemu/SheepShaver/src/MacOSX
-$ xcodebuild build -project SheepShaver_Xcode8.xcodeproj -configuration Release
-```
-or same as Linux
+The Basilisk emulator runs in an infinite loop (simulating the classic Mac and its CPU) thus it cannot yield to the browser's event loop. Therefore it is executed in a web worker, which interacts with the main browser thread for input and output. [`SharedArrayBuffer`s](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/SharedArrayBuffer) and [`Atomics`](https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Atomics) operations are used to efficiently communicate with the worker in the absence of `postMessage`/`message` event handlers.
 
-##### Linux
-```
-$ cd macemu/SheepShaver/src/Unix
-$ ./autogen.sh
-$ make
-```
-##### MinGW32/MSYS2
-```
-$ cd macemu/SheepShaver
-$ make links
-$ cd src/Windows
-$ ../Unix/autogen.sh
-$ make
-```
-### Recommended key bindings for gnome
-https://github.com/kanjitalk755/macemu/blob/master/SheepShaver/doc/Linux/gnome_keybindings.txt
+## Build Instructions
 
-(from https://github.com/kanjitalk755/macemu/issues/59)
+Not a standalone project, see [the build instructions in the infinite-mac repo](https://github.com/mihaip/infinite-mac#building-basilisk-ii) for details on how to build this.

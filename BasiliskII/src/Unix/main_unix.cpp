@@ -31,7 +31,7 @@
 # include <SDL_main.h>
 #endif
 
-#ifndef USE_SDL_VIDEO
+#if !defined(USE_SDL_VIDEO) && !defined(EMSCRIPTEN)
 # include <X11/Xlib.h>
 #endif
 
@@ -97,6 +97,13 @@ using std::string;
 #include "sigsegv.h"
 #include "rpc.h"
 
+#ifdef EMSCRIPTEN
+#include <emscripten.h>
+#include "JS/input_js.h"
+#include "JS/audio_js.h"
+#endif
+
+
 #if USE_JIT
 #ifdef UPDATE_UAE
 extern void (*flush_icache)(void); // from compemu_support.cpp
@@ -141,7 +148,7 @@ bool TwentyFourBitAddressing;
 
 
 // Global variables
-#ifndef USE_SDL_VIDEO
+#if !defined(USE_SDL_VIDEO) && !defined(EMSCRIPTEN)
 extern char *x_display_name;						// X11 display name
 extern Display *x_display;							// X11 display handle
 #ifdef X11_LOCK_TYPE
@@ -264,7 +271,7 @@ static int vm_acquire_mac_fixed(void *addr, size_t size)
 
 static sigsegv_return_t sigsegv_handler(sigsegv_info_t *sip)
 {
-	const uintptr fault_address = (uintptr)sigsegv_get_fault_address(sip);
+	const uintptr fault_address = (uintptr_t)sigsegv_get_fault_address(sip);
 #if ENABLE_VOSF
 	// Handle screen fault
 	extern bool Screen_fault_handler(sigsegv_info_t *sip);
@@ -338,6 +345,13 @@ void cpu_do_check_ticks(void)
 	n_check_ticks++;
 #endif
 
+#ifdef EMSCRIPTEN
+	static bool js_frequent_read_input = PrefsFindBool("jsfrequentreadinput");
+	if (js_frequent_read_input) {
+		ReadJSInput();
+	}
+#endif
+
 	uint64 now;
 	static uint64 next = 0;
 	if (next == 0)
@@ -357,6 +371,11 @@ void cpu_do_check_ticks(void)
 	// Check for interrupt opportunity
 	now = GetTicks_usec();
 	if (next < now) {
+#ifdef EMSCRIPTEN
+		if (!js_frequent_read_input) {
+			ReadJSInput();
+		}
+#endif
 		one_tick();
 		do {
 			next += 16625;
@@ -436,7 +455,7 @@ int main(int argc, char **argv)
 	for (int i=1; i<argc; i++) {
 		if (strcmp(argv[i], "--help") == 0) {
 			usage(argv[0]);
-#ifndef USE_SDL_VIDEO
+#if !defined(USE_SDL_VIDEO) && !defined(EMSCRIPTEN)
 		} else if (strcmp(argv[i], "--display") == 0) {
 			i++; // don't remove the argument, gtk_init() needs it too
 			if (i < argc)
@@ -544,7 +563,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-#ifndef USE_SDL_VIDEO
+#if !defined(USE_SDL_VIDEO) && !defined(EMSCRIPTEN)
 	// Open display
 	x_display = XOpenDisplay(x_display_name);
 	if (x_display == NULL) {
@@ -560,6 +579,7 @@ int main(int argc, char **argv)
 #endif
 #endif
 
+#ifndef EMSCRIPTEN
 #ifdef USE_SDL
 	// Initialize SDL system
 	int sdl_flags = 0;
@@ -589,6 +609,7 @@ int main(int argc, char **argv)
 #endif
 	
 #endif
+#endif // not EMSCRIPTEN
 
 	// Init system routines
 	SysInit();
@@ -598,6 +619,7 @@ int main(int argc, char **argv)
 		if (!PrefsEditor())
 			QuitEmulator();
 
+#ifndef EMSCRIPTEN
 	// Install the handler for SIGSEGV
 	if (!sigsegv_install_handler(sigsegv_handler)) {
 		sprintf(str, GetString(STR_SIG_INSTALL_ERR), "SIGSEGV", strerror(errno));
@@ -607,6 +629,7 @@ int main(int argc, char **argv)
 	
 	// Register dump state function when we got mad after a segfault
 	sigsegv_set_dump_state(sigsegv_dump_state);
+#endif // not EMSCRIPTEN
 
 	// Read RAM size
 	RAMSize = PrefsFindInt32("ramsize");
@@ -991,7 +1014,7 @@ void QuitEmulator(void)
 	PrefsExit();
 
 	// Close X11 server connection
-#ifndef USE_SDL_VIDEO
+#if !defined(USE_SDL_VIDEO) && !defined(EMSCRIPTEN)
 	if (x_display)
 		XCloseDisplay(x_display);
 #endif
@@ -1060,6 +1083,7 @@ static void sigint_handler(...)
 void Set_pthread_attr(pthread_attr_t *attr, int priority)
 {
 	pthread_attr_init(attr);
+#ifndef EMSCRIPTEN
 #if defined(_POSIX_THREAD_PRIORITY_SCHEDULING)
 	// Some of these only work for superuser
 	if (geteuid() == 0) {
@@ -1081,6 +1105,7 @@ void Set_pthread_attr(pthread_attr_t *attr, int priority)
 #endif
 	}
 #endif
+#endif // ifndef EMSCRIPTEN
 }
 #endif // HAVE_PTHREADS
 
@@ -1262,8 +1287,16 @@ static void one_tick(...)
 	VideoRefresh();
 #endif
 
-#ifndef HAVE_PTHREADS
-	// No threads available, perform networking from here
+#if defined(EMSCRIPTEN)
+	// tuned (badly) for sr=22050 blocksize=4096
+	if (tick_counter % 11 == 0) {
+		AudioRefresh();
+	}
+#endif
+
+#if !defined(HAVE_PTHREADS) && !defined(EMSCRIPTEN)
+	// No threads available, perform networking from here. We trigger Ethernet
+	// interrupts more directly with Emscripten.
 	SetInterruptFlag(INTFLAG_ETHER);
 #endif
 
