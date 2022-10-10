@@ -12,6 +12,7 @@ mandir = @mandir@
 man1dir = $(mandir)/man1
 
 KEYCODES = @KEYCODES@
+EMSCRIPTEN = @EMSCRIPTEN@
 
 DESTDIR =
 
@@ -21,10 +22,21 @@ CFLAGS = @CFLAGS@
 CXXFLAGS = @CXXFLAGS@
 CPUINCLUDES_FLAGS=@CPUINCLUDES@
 CPUINCLUDES_FLAGS:=$(CPUINCLUDES_FLAGS:-I%=-I@top_srcdir@/%)
-CPPFLAGS = @CPPFLAGS@ -I@top_srcdir@/../include -I@top_srcdir@/. -I. $(CPUINCLUDES_FLAGS) -I@top_srcdir@/../slirp
+CPPFLAGS = @CPPFLAGS@ -I@top_srcdir@/../include -I@top_srcdir@/. -I. $(CPUINCLUDES_FLAGS)
+ifneq ($(EMSCRIPTEN),yes)
+	# this breaks under emscripten because libcxx accidentally includes a file inside this dir :(
+	CPPFLAGS += -I@top_srcdir@/../slirp
+endif
+
 DEFS = @DEFS@ @DEFINES@ -D_REENTRANT -DDATADIR=\"$(datadir)/$(APP)\"
 LDFLAGS = @LDFLAGS@
 LIBS = @LIBS@
+ifeq ($(EMSCRIPTEN),yes)
+	# Breaks emscripten because it can't link with libm.a or SDL (which are
+	# built for the host OS)
+	SKIP_LIBS = -lm -lSDL -L/usr/lib/x86_64-linux-gnu -L/usr/lib/aarch64-linux-gnu
+	LIBS := $(filter-out $(SKIP_LIBS),$(LIBS))
+endif
 SYSSRCS = @SYSSRCS@
 CPUSRCS = @CPUSRCS@
 BLESS = @BLESS@
@@ -164,7 +176,7 @@ uninstall:
 	rmdir $(DESTDIR)$(datadir)/$(APP)
 
 mostlyclean:
-	rm -f $(PROGS) $(OBJ_DIR)/* core* *.core *~ *.bak
+	rm -f $(PROGS) $(OBJS) core* *.core *~ *.bak
 
 clean: mostlyclean
 	rm -f cpuemu.cpp cpudefs.cpp cputmp*.s cpufast*.s cpustbl.cpp cputbl.h compemu.cpp compstbl.cpp comptbl.h
@@ -178,6 +190,22 @@ distclean: clean
 
 depend dep:
 	makedepend $(CPPFLAGS) -Y. $(SRCS) 2>/dev/null
+
+
+$(OBJ_DIR)/build68k_native.o : build68k.c
+	gcc $(CPPFLAGS) $(DEFS) $(CFLAGS) -c $< -o $@
+$(OBJ_DIR)/gencpu_native.o : gencpu.c
+	gcc $(CPPFLAGS) $(DEFS) $(CFLAGS) -c $< -o $@
+$(OBJ_DIR)/gencomp_native.o : gencomp.c
+	gcc $(CPPFLAGS) $(DEFS) $(CFLAGS) -c $< -o $@
+$(OBJ_DIR)/readcpu.o : readcpu.cpp
+	$(CXX) $(CPPFLAGS) $(DEFS) $(CXXFLAGS) -c $< -o $@
+$(OBJ_DIR)/readcpu_native.o : readcpu.cpp
+	g++ $(CPPFLAGS) $(DEFS) $(CXXFLAGS) -c $< -o $@
+$(OBJ_DIR)/cpudefs.o : cpudefs.cpp
+	$(CXX) $(CPPFLAGS) $(DEFS) $(CXXFLAGS) -c $< -o $@
+$(OBJ_DIR)/cpudefs_native.o : cpudefs.cpp
+	g++ $(CPPFLAGS) $(DEFS) $(CXXFLAGS) -c $< -o $@
 
 $(OBJ_DIR)/SDLMain.o : SDLMain.m
 	$(CC) $(CPPFLAGS) $(DEFS) $(CFLAGS) -c $< -o $@
@@ -200,12 +228,12 @@ $(OBJ_DIR)/%.go : %.cpp
 $(OBJ_DIR)/%.o: %.rc
 	windres --include-dir ../Windows -i $< -o $@
 
-$(OBJ_DIR)/build68k$(EXEEXT): $(OBJ_DIR)/build68k.o
-	$(CC) $(LDFLAGS) -o $(OBJ_DIR)/build68k$(EXEEXT) $(OBJ_DIR)/build68k.o
-$(OBJ_DIR)/gencpu$(EXEEXT): $(OBJ_DIR)/gencpu.o $(OBJ_DIR)/readcpu.o $(OBJ_DIR)/cpudefs.o
-	$(CXX) $(LDFLAGS) -o $(OBJ_DIR)/gencpu$(EXEEXT) $(OBJ_DIR)/gencpu.o $(OBJ_DIR)/readcpu.o $(OBJ_DIR)/cpudefs.o
-$(OBJ_DIR)/gencomp$(EXEEXT): $(OBJ_DIR)/gencomp.o $(OBJ_DIR)/readcpu.o $(OBJ_DIR)/cpudefs.o
-	$(CXX) $(LDFLAGS) -o $(OBJ_DIR)/gencomp$(EXEEXT) $(OBJ_DIR)/gencomp.o $(OBJ_DIR)/readcpu.o $(OBJ_DIR)/cpudefs.o
+$(OBJ_DIR)/build68k$(EXEEXT): $(OBJ_DIR)/build68k_native.o
+	gcc $(LDFLAGS) -o $(OBJ_DIR)/build68k$(EXEEXT) $(OBJ_DIR)/build68k_native.o
+$(OBJ_DIR)/gencpu$(EXEEXT): $(OBJ_DIR)/gencpu_native.o $(OBJ_DIR)/readcpu_native.o $(OBJ_DIR)/cpudefs_native.o
+	g++ $(LDFLAGS) -o $(OBJ_DIR)/gencpu$(EXEEXT) $(OBJ_DIR)/gencpu_native.o $(OBJ_DIR)/readcpu_native.o $(OBJ_DIR)/cpudefs_native.o
+$(OBJ_DIR)/gencomp$(EXEEXT): $(OBJ_DIR)/gencomp_native.o $(OBJ_DIR)/readcpu_native.o $(OBJ_DIR)/cpudefs_native.o
+	g++ $(LDFLAGS) -o $(OBJ_DIR)/gencomp$(EXEEXT) $(OBJ_DIR)/gencomp_native.o $(OBJ_DIR)/readcpu_native.o $(OBJ_DIR)/cpudefs_native.o
 
 cpudefs.cpp: $(OBJ_DIR)/build68k$(EXEEXT) @top_srcdir@/../uae_cpu/table68k
 	$(OBJ_DIR)/build68k$(EXEEXT) <@top_srcdir@/../uae_cpu/table68k >cpudefs.cpp

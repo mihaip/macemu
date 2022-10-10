@@ -401,14 +401,14 @@ static void Blit_Expand_1_To_32(uint8 * dest, const uint8 * p, uint32 length)
 	uint32 *q = (uint32 *)dest;
 	for (uint32 i=0; i<length; i++) {
 		uint8 c = *p++;
-		*q++ = -(c >> 7);
-		*q++ = -((c >> 6) & 1);
-		*q++ = -((c >> 5) & 1);
-		*q++ = -((c >> 4) & 1);
-		*q++ = -((c >> 3) & 1);
-		*q++ = -((c >> 2) & 1);
-		*q++ = -((c >> 1) & 1);
-		*q++ = -(c & 1);
+		*q++ = ExpandMap[c >> 7];
+		*q++ = ExpandMap[(c >> 6) & 1];
+		*q++ = ExpandMap[(c >> 5) & 1];
+		*q++ = ExpandMap[(c >> 4) & 1];
+		*q++ = ExpandMap[(c >> 3) & 1];
+		*q++ = ExpandMap[(c >> 2) & 1];
+		*q++ = ExpandMap[(c >> 1) & 1];
+		*q++ = ExpandMap[c & 1];
 	}
 }
 
@@ -498,7 +498,7 @@ bool Screen_blitter_init(VisualFormat const & visual_format, bool native_byte_or
 #else
 	const bool use_sdl_video = false;
 #endif
-#if REAL_ADDRESSING || DIRECT_ADDRESSING
+#if REAL_ADDRESSING || DIRECT_ADDRESSING || EMSCRIPTEN
 	if (mac_depth == 1 && !use_sdl_video && !visual_format.fullscreen) {
 
 		// Windowed 1-bit mode uses a 1-bit X image, so there's no need for special blitting routines

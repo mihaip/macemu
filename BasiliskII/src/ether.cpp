@@ -192,24 +192,6 @@ void EtherReset(void)
 	ether_reset();
 }
 
-
-/*
- *  Check whether Ethernet address is AppleTalk or Ethernet broadcast address
- */
-
-static inline bool is_apple_talk_broadcast(uint8 *p)
-{
-	return p[0] == 0x09 && p[1] == 0x00 && p[2] == 0x07
-	    && p[3] == 0xff && p[4] == 0xff && p[5] == 0xff;
-}
-
-static inline bool is_ethernet_broadcast(uint8 *p)
-{
-	return p[0] == 0xff && p[1] == 0xff && p[2] == 0xff
-	    && p[3] == 0xff && p[4] == 0xff && p[5] == 0xff;
-}
-
-
 /*
  *  Driver Open() routine
  */
@@ -225,7 +207,7 @@ int16 EtherOpen(uint32 pb, uint32 dce)
 	if (r.a[0] == 0)
 		return openErr;
 	ether_data = r.a[0];
-	D(bug(" data %08x\n", ether_data));
+	D(bug(" ether_data %08x\n", ether_data));
 
 	WriteMacInt16(ether_data + ed_DeferredTask + qType, dtQType);
 	WriteMacInt32(ether_data + ed_DeferredTask + dtAddr, ether_data + ed_Code);
@@ -315,7 +297,24 @@ int16 EtherControl(uint32 pb, uint32 dce)
 			// Set source address
 			uint32 hdr = ReadMacInt32(wds + 2);
 			Host2Mac_memcpy(hdr + 6, ether_addr, 6);
-			D(bug("to %08x%04x, type %04x\n", ReadMacInt32(hdr), ReadMacInt16(hdr + 4), ReadMacInt16(hdr + 12)));
+			uint8 destination_ether_addr[6];
+			Mac2Host_memcpy(destination_ether_addr, hdr, 6);
+			if (is_apple_talk_broadcast(destination_ether_addr)) {
+				D(bug("AppleTalk broadcast"));
+			} else if (is_ethernet_broadcast(destination_ether_addr)) {
+				D(bug("Ethernet broadcast"));
+			} else {
+				D(bug("to %02x:%02x:%02x:%02x:%02x:%02x",
+					destination_ether_addr[0], destination_ether_addr[1],
+					destination_ether_addr[2], destination_ether_addr[3],
+					destination_ether_addr[4], destination_ether_addr[5]));
+			}
+			uint32 ethertype = ReadMacInt16(hdr + 12);
+			if (ethertype <= 0x05DC) {
+				D(bug(" length %d\n", ethertype));
+			} else {
+				D(bug(" type %04x\n", ethertype));
+			}
 
 			if (net_open) {
 #if SUPPORTS_UDP_TUNNEL

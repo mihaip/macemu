@@ -24,6 +24,11 @@
 
 #include <errno.h>
 
+#ifdef EMSCRIPTEN
+#include <emscripten.h>
+#include "JS/input_js.h"
+#endif
+
 #define DEBUG 0
 #include "debug.h"
 
@@ -370,10 +375,19 @@ void idle_wait(void)
 		return;
 	}
 	UNLOCK_IDLE;
-#endif
-
+#else
+#ifdef EMSCRIPTEN
+	int has_input = EM_ASM_INT_V({
+		return workerApi.idleWait();
+	});
+	if (has_input) {
+		ReadJSInput();
+	}
+#else
 	// Fallback: sleep 10 ms
 	Delay_usec(10000);
+#endif
+#endif
 #endif
 }
 

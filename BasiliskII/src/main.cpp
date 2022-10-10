@@ -132,6 +132,22 @@ bool InitAll(const char *vmdir)
 		XPRAM[0x77] = 0x01;
 	}
 
+	if (PrefsFindBool("appletalk")) {
+		// node ID hint for printer port (AppleTalk)
+		XPRAM[0x12] = 0x01;
+		// serial ports config bits: 4-7 A, 0-3 B
+		// 	useFree   0 Use undefined
+		// 	useATalk  1 AppleTalk
+		// 	useAsync  2 Async
+		// 	useExtClk 3 externally clocked
+		XPRAM[0x13] = 0x20;
+		// AppleTalk Zone name ("*")
+		XPRAM[0xbd] = 0x01;
+		XPRAM[0xbe] = 0x2a;
+		// AppleTalk Network Number
+		XPRAM[0xde] = 0xff;
+	}
+
 	// Set boot volume
 	int16 i16 = PrefsFindInt32("bootdrive");
 	XPRAM[0x78] = i16 >> 8;

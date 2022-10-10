@@ -2581,6 +2581,7 @@ sigsegv_address_t sigsegv_get_fault_instruction_address(sigsegv_info_t *SIP)
 #endif
 	return SIP->pc;
 }
+#if defined(HAVE_SIGSEGV_RECOVERY) || defined(HAVE_MACH_EXCEPTIONS)
 
 // This function handles the badaccess to memory.
 // It is called from the signal handler or the exception handler.
@@ -2630,7 +2631,7 @@ static bool handle_badaccess(SIGSEGV_FAULT_HANDLER_ARGLIST_1)
 
 	return false;
 }
-
+#endif
 
 /*
  * There are two mechanisms for handling a bad memory access,
