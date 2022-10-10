@@ -87,6 +87,9 @@ prefs_desc common_prefs_items[] = {
 	{"name_encoding", TYPE_INT32, false,	"file name encoding"},
 	{"delay", TYPE_INT32, false,	"additional delay [uS] every 64k instructions"},
 	{"init_grab", TYPE_BOOLEAN, false,	"initially grabbing mouse"},
+	{"appletalk", TYPE_BOOLEAN, false, "enable AppleTalk in default PRAM"},
+	{"jsfrequentreadinput", TYPE_BOOLEAN, false, "Read JS input frequently (multiple times per tick) to reduce latency"},
+
 	{NULL, TYPE_END, false, NULL} // End of list
 };
 
@@ -112,7 +115,7 @@ void AddPrefsDefaults(void)
 	PrefsAddBool("nosound", false);
 	PrefsAddBool("noclipconversion", false);
 	PrefsAddBool("nogui", false);
-	
+
 #if USE_JIT
 	// JIT compiler specific options
 //	PrefsAddBool("jit", true);

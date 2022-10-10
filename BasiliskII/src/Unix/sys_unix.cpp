@@ -270,7 +270,9 @@ void SysMountFirstFloppy(void)
 
 void SysAddFloppyPrefs(void)
 {
-#if defined(__linux__)
+#if defined(EMSCRIPTEN)
+	// Emscripten doesn't have any floppy drives
+#elif defined(__linux__)
 	DIR *fd_dir = opendir("/dev/floppy");
 	if (fd_dir) {
 		struct dirent *floppy_dev;

@@ -1,0 +1,5 @@
+BasedOnStyle: Chromium
+ColumnLimit: 100
+IncludeCategories:
+    - Regex: '^"sysdeps.h"'
+      Priority: -3
