@@ -26,6 +26,7 @@ class JS_monitor_desc : public monitor_desc {
 
   virtual void switch_to_current_mode();
   virtual void set_palette(uint8* pal, int num);
+  virtual void set_gamma(uint8* gamma, int num);
 
   bool video_open();
   void video_close();
@@ -138,6 +139,10 @@ void JS_monitor_desc::set_palette(uint8* pal, int num_in) {
     }
     last_palette_hash = SpookyHash::Hash64(pal, num_in * 3, 0);
   }
+}
+
+void JS_monitor_desc::set_gamma(uint8* gamma, int num) {
+  // Not implemented
 }
 
 bool VideoInit(bool classic) {

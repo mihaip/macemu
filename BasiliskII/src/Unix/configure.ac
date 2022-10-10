@@ -41,6 +41,7 @@ AC_ARG_WITH(sdl3,            [  --with-sdl3             use SDL 3.x, rather than
 
 dnl Emscripten options.
 AC_ARG_ENABLE(emscripten,     [  --enable-emscripten      Emscripten is the real target [default=no]], [WANT_EMSCRIPTEN=$enableval], [WANT_EMSCRIPTEN=no])
+AC_ARG_ENABLE(asm-opts,       [  --enable-asm-opts      Assembly optimizations for CPU emulation [default=yes]], [WANT_ASM_OPTS=$enableval], [WANT_ASM_OPTS=yes])
 
 dnl JIT compiler options.
 AC_ARG_ENABLE(jit-compiler,  [  --enable-jit-compiler   enable JIT compiler [default=yes]], [WANT_JIT=$enableval], [WANT_JIT=yes])
@@ -1618,7 +1619,9 @@ dnl Other platforms should define their own set of noflags file variants
 CAN_JIT=no
 JITSRCS="compemu1.cpp compemu2.cpp compemu3.cpp compemu4.cpp compemu5.cpp compemu6.cpp compemu7.cpp compemu8.cpp"
 
-if [[ "x$HAVE_GCC27" = "xyes" -a "x$HAVE_I386" = "xyes" ]]; then
+if [[ "x$WANT_ASM_OPTS" = "xno" ]]; then
+  echo No assembly optimizations for CPU emulation
+elif [[ "x$HAVE_GCC27" = "xyes" -a "x$HAVE_I386" = "xyes" ]]; then
   dnl i386 CPU
   DEFINES="$DEFINES -DUNALIGNED_PROFITABLE -DREGPARAM=\"__attribute__((regparm(3)))\""
   if [[ "x$HAVE_GAS" = "xyes" ]]; then
