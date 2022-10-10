@@ -31,10 +31,13 @@ export LDFLAGS="$em_flags $em_ldflags"
 ./autogen.sh \
   --without-esd \
   --without-gtk \
+  --disable-sdl-video \
+  --disable-sdl-audio \
   --disable-fbdev-dga \
   --disable-xf86-vidmode \
   --disable-xf86-dga \
   --disable-jit-compiler \
+  --disable-asm-opts \
   --disable-vosf \
   --enable-emscripten \
   --build="`uname -m`-unknown-linux-gnu" \

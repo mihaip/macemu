@@ -8,7 +8,7 @@ set -euo pipefail
   --disable-xf86-vidmode \
   --disable-xf86-dga \
   --disable-jit-compiler \
-  --enable-addressing="banks" \
+  --disable-asm-opts \
   --disable-vosf \
   --build="`uname -m`-unknown-linux-gnu" \
   --cache-file=/tmp/config.cache.native
