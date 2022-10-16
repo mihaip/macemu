@@ -6,11 +6,15 @@ AC_CONFIG_SRCDIR(main_unix.cpp)
 AC_PREREQ(2.52)
 AC_CONFIG_HEADER(config.h)
 AH_TOP(
+#if defined(__APPLE__)
+#include "../MacOSX/config/config.h"
+#else
 #ifndef CONFIG_H
 #define CONFIG_H
 )
 AH_BOTTOM(
 #endif /* CONFIG_H */
+#endif /* defined(__APPLE__) */
 )
 
 dnl Canonical system information.
