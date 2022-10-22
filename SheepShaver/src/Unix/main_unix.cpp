@@ -127,7 +127,7 @@
 #include <SDL.h>
 #endif
 
-#ifndef USE_SDL_VIDEO
+#if !defined(USE_SDL_VIDEO) && !defined(EMSCRIPTEN)
 #include <X11/Xlib.h>
 #endif
 
@@ -196,12 +196,12 @@ uint8 *RAMBaseHost;		// Base address of Mac RAM (host address space)
 uint8 *ROMBaseHost;		// Base address of Mac ROM (host address space)
 uint32 ROMEnd;
 
-#if defined(__APPLE__) && defined(__x86_64__)
+#if (defined(__APPLE__) && defined(__x86_64__)) || defined(EMSCRIPTEN)
 uint8 gZeroPage[0x3000], gKernelData[0x2000];
 #endif
 
 // Global variables
-#ifndef USE_SDL_VIDEO
+#if !defined(USE_SDL_VIDEO) && !defined(EMSCRIPTEN)
 char *x_display_name = NULL;				// X11 display name
 Display *x_display = NULL;					// X11 display handle
 #ifdef X11_LOCK_TYPE
@@ -254,7 +254,7 @@ uintptr SheepMem::data;						// Top of SheepShaver data (stack like storage)
 
 
 // Prototypes
-#if !defined(__APPLE__) || !defined(__x86_64__)
+#if (!defined(__APPLE__) || !defined(__x86_64__)) && !defined(EMSCRIPTEN)
 static bool kernel_data_init(void);
 static bool shm_map_address(int kernel_area, uint32 addr);
 #endif
@@ -671,12 +671,14 @@ static bool install_signal_handlers(void)
 		return false;
 	}
 #else
+#ifndef EMSCRIPTEN
 	// Install SIGSEGV handler for CPU emulator
 	if (!sigsegv_install_handler(sigsegv_handler)) {
 		sprintf(str, GetString(STR_SIG_INSTALL_ERR), "SIGSEGV", strerror(errno));
 		ErrorAlert(str);
 		return false;
 	}
+#endif // not EMSCRIPTEN
 #endif
 	return true;
 }
@@ -793,7 +795,7 @@ int main(int argc, char **argv)
 			argv[i] = NULL;
 		} else if (strcmp(argv[i], "--help") == 0) {
 			usage(argv[0]);
-#ifndef USE_SDL_VIDEO
+#if !defined(USE_SDL_VIDEO) && !defined(EMSCRIPTEN)
 		} else if (strcmp(argv[i], "--display") == 0) {
 			i++;
 			if (i < argc)
@@ -878,7 +880,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-#ifndef USE_SDL_VIDEO
+#if !defined(USE_SDL_VIDEO) && !defined(EMSCRIPTEN)
 	// Open display
 	x_display = XOpenDisplay(x_display_name);
 	if (x_display == NULL) {
@@ -922,6 +924,7 @@ int main(int argc, char **argv)
 	paranoia_check();
 #endif
 
+#ifndef EMSCRIPTEN
 	// Open /dev/zero
 	zero_fd = open("/dev/zero", O_RDWR);
 	if (zero_fd < 0) {
@@ -929,8 +932,9 @@ int main(int argc, char **argv)
 		ErrorAlert(str);
 		goto quit;
 	}
+#endif
 
-#if !defined(__APPLE__) || !defined(__x86_64__)
+#if (!defined(__APPLE__) || !defined(__x86_64__)) && !defined(EMSCRIPTEN)
 	// Create areas for Kernel Data
 	if (!kernel_data_init())
 		goto quit;
@@ -985,7 +989,7 @@ int main(int argc, char **argv)
 	}
 #endif
 	if (!memory_mapped_from_zero) {
-#ifndef PAGEZERO_HACK
+#if !defined(PAGEZERO_HACK) && !defined(EMSCRIPTEN)
 		// Create Low Memory area (0x0000..0x3000)
 		if (vm_mac_acquire_fixed(0, 0x3000) < 0) {
 			sprintf(str, GetString(STR_LOW_MEM_MMAP_ERR), strerror(errno));
@@ -1082,6 +1086,7 @@ int main(int argc, char **argv)
 #endif
 	vm_protect(ROMBaseHost, ROM_AREA_SIZE, VM_PAGE_READ | VM_PAGE_EXECUTE);
 
+#if !defined(EMCRIPTEN)
 	// Start 60Hz thread
 	tick_thread_cancel = false;
 	tick_thread_active = (pthread_create(&tick_thread, NULL, tick_func, NULL) == 0);
@@ -1092,6 +1097,7 @@ int main(int argc, char **argv)
 	nvram_thread_cancel = false;
 	nvram_thread_active = (pthread_create(&nvram_thread, NULL, nvram_func, NULL) == 0);
 	D(bug("NVRAM thread installed (%ld)\n", nvram_thread));
+#endif
 
 #if !EMULATED_PPC
 	// Install SIGILL handler
@@ -1221,7 +1227,7 @@ static void Quit(void)
 #endif
 
 	// Close X11 server connection
-#ifndef USE_SDL_VIDEO
+#if !defined(USE_SDL_VIDEO) && !defined(EMSCRIPTEN)
 	if (x_display)
 		XCloseDisplay(x_display);
 #endif
@@ -1235,7 +1241,7 @@ static void Quit(void)
 	exit(0);
 }
 
-#if !defined(__APPLE__) || !defined(__x86_64__)
+#if (!defined(__APPLE__) || !defined(__x86_64__)) && !defined(EMSCRIPTEN)
 /*
  *  Initialize Kernel Data segments
  */
@@ -1520,7 +1526,7 @@ void Set_pthread_attr(pthread_attr_t *attr, int priority)
 {
 #ifdef HAVE_PTHREADS
 	pthread_attr_init(attr);
-#if defined(_POSIX_THREAD_PRIORITY_SCHEDULING)
+#if defined(_POSIX_THREAD_PRIORITY_SCHEDULING) && !defined(EMSCRIPTEN)
 	// Some of these only work for superuser
 	if (geteuid() == 0) {
 		pthread_attr_setinheritsched(attr, PTHREAD_EXPLICIT_SCHED);

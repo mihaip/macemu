@@ -52,6 +52,9 @@ AC_ARG_WITH(gtk,            [  --with-gtk              use GTK user interface [d
 AC_ARG_WITH(mon,            [  --with-mon              use mon as debugger [default=yes]], [WANT_MON=$withval], [WANT_MON=no])
 AC_ARG_WITH(dgcc,           [  --with-dgcc=COMPILER    use C++ COMPILER to compile synthetic opcodes or 'precompiled'], [DYNGEN_CC=$withval], [DYNGEN_CC=precompiled])
 
+dnl Emscripten options.
+AC_ARG_ENABLE(emscripten,     [  --enable-emscripten      Emscripten is the real target [default=no]], [WANT_EMSCRIPTEN=$enableval], [WANT_EMSCRIPTEN=no])
+
 AC_ARG_WITH(bincue,   
   AS_HELP_STRING([--with-bincue], [Allow cdrom image files in bin/cue mode]))
 
@@ -77,6 +80,8 @@ AC_ARG_ENABLE(sdl-audio,    [  --enable-sdl-audio      use SDL for audio [defaul
 AC_ARG_ENABLE(sdl-framework,    [  --enable-sdl-framework  use SDL framework [default=no]], [WANT_SDL_FRAMEWORK=$enableval], [WANT_SDL_FRAMEWORK=no])
 AC_ARG_ENABLE(sdl-framework-prefix,    [  --enable-sdl-framework-prefix=PFX    default=/Library/Frameworks], [SDL_FRAMEWORK="$enableval"], [SDL_FRAMEWORK=/Library/Frameworks])
 AC_ARG_WITH(sdl1,            [  --with-sdl1             use SDL 1.x, rather than SDL 2.x [default=no]], [WANT_SDL_VERSION_MAJOR=1], [])
+
+AC_SUBST(EMSCRIPTEN, [$WANT_EMSCRIPTEN])
 
 dnl Checks for programs.
 AC_PROG_CC_C99
@@ -259,7 +264,7 @@ else
 fi
 
 dnl We need X11, if not using SDL.
-if [[ "x$WANT_SDL_VIDEO" != "xyes" ]]; then
+if [[ "x$WANT_SDL_VIDEO" != "xyes" -a "x$WANT_EMSCRIPTEN" = "xno" ]]; then
   AC_PATH_XTRA
   if [[ "x$no_x" = "xyes" ]]; then
     AC_MSG_ERROR([You need X11 to run SheepShaver.])
@@ -641,7 +646,7 @@ SCSISRC=../dummy/scsi_dummy.cpp
 AUDIOSRC=../dummy/audio_dummy.cpp
 PREFSSRC=../dummy/prefs_dummy.cpp
 EXTFSSRC=extfs_unix.cpp
-EXTRASYSSRCS=
+EXTRASYSSRCS=macroman.cpp
 case "$target_os" in
 linux*)
   ETHERSRC=ether_unix.cpp
@@ -783,7 +788,7 @@ if [[ "x$WANT_SDL_VIDEO" = "xyes" ]]; then
       LIBS="$LIBS -lX11"
     fi
   fi
-else
+elif [[ "x$WANT_EMSCRIPTEN" = "xno" ]]; then
   VIDEOSRCS="video_x.cpp"
   KEYCODES="keycodes"
   EXTRASYSSRCS="$EXTRASYSSRCS clip_unix.cpp"
@@ -805,6 +810,15 @@ if [[ "x$have_libvhd" = "xyes" ]]; then
   EXTRASYSSRCS="$EXTRASYSSRCS vhd_unix.cpp"
 fi
 
+
+if [[ "x$WANT_EMSCRIPTEN" = "xyes" ]]; then
+  VIDEOSRCS="JS/video_js.cpp SpookyV2.cpp"
+  SCSISRC=../dummy/scsi_dummy.cpp
+  ETHERSRC=../dummy/ether_dummy.cpp
+  AUDIOSRC=../dummy/audio_dummy.cpp
+  EXTRASYSSRCS="$EXTRASYSSRCS JS/input_js.cpp ../dummy/clip_dummy.cpp"
+  AC_DEFINE(EMSCRIPTEN, 1, [Define if targeting Emscripten.])
+fi
 
 SYSSRCS="$VIDEOSRCS $EXTFSSRC $PREFSSRC $SERIALSRC $ETHERSRC $SCSISRC $AUDIOSRC $SEMSRC $UISRCS $EXTRASYSSRCS"
 
@@ -948,6 +962,12 @@ AC_CACHE_CHECK([whether mmap supports MAP_ANONYMOUS],
   AC_LANG_RESTORE
   ]
 )
+dnl Feature detection of MAP_ANONYMOUS does not work when using the emscripten
+dnl compiler (because we can't run the test binary) -- hardcode it to being 
+dnl enabled.
+if [[ "x$WANT_EMSCRIPTEN" = "xyes" ]]; then
+  ac_cv_mmap_anonymous=yes
+fi
 AC_TRANSLATE_DEFINE(HAVE_MMAP_ANONYMOUS, "$ac_cv_mmap_anonymous",
   [Define if <sys/mman.h> defines MAP_ANONYMOUS and mmap()'ing with MAP_ANONYMOUS works.])
 
@@ -1744,5 +1764,6 @@ echo GTK user interface ............... : $WANT_GTK
 echo mon debugger support ............. : $WANT_MON
 echo Addressing mode .................. : $WANT_ADDRESSING_MODE
 echo Bad memory access recovery type .. : $sigsegv_recovery
+echo Emscripten ....................... : $WANT_EMSCRIPTEN
 echo
 echo "Configuration done. Now type \"make\"."
