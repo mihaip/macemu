@@ -278,6 +278,9 @@ fi
 
 dnl We need pthreads on non-PowerPC systems. Try libpthread first, then libc_r (FreeBSD), then PTL.
 HAVE_PTHREADS=yes
+if [[ "x$WANT_EMSCRIPTEN" = "xyes" ]]; then
+  HAVE_PTHREADS=no
+else
 case $EMULATED_PPC:$target_os in
 no:linux*|no:netbsd*)
   dnl We do have our own pthread_cancel() implementation
@@ -307,6 +310,7 @@ no:linux*|no:netbsd*)
   ])
   ;;
 esac
+fi
 if [[ "x$HAVE_PTHREADS" = "xyes" ]]; then
   AC_DEFINE(HAVE_PTHREADS, 1, [Define if pthreads are available.])
 fi
@@ -813,6 +817,7 @@ fi
 
 if [[ "x$WANT_EMSCRIPTEN" = "xyes" ]]; then
   VIDEOSRCS="JS/video_js.cpp SpookyV2.cpp"
+  SERIALSRC=../dummy/serial_dummy.cpp
   SCSISRC=../dummy/scsi_dummy.cpp
   ETHERSRC=../dummy/ether_dummy.cpp
   AUDIOSRC=../dummy/audio_dummy.cpp
