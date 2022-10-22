@@ -359,6 +359,14 @@ static int idle_sem_ok = -1;
 
 void idle_wait(void)
 {
+#ifdef EMSCRIPTEN
+	int has_input = EM_ASM_INT_V({
+		return workerApi.idleWait();
+	});
+	if (has_input) {
+		ReadJSInput();
+	}
+#else
 #ifdef IDLE_USES_COND_WAIT
 	pthread_mutex_lock(&idle_lock);
 	pthread_cond_wait(&idle_cond, &idle_lock);
@@ -376,19 +384,11 @@ void idle_wait(void)
 	}
 	UNLOCK_IDLE;
 #else
-#ifdef EMSCRIPTEN
-	int has_input = EM_ASM_INT_V({
-		return workerApi.idleWait();
-	});
-	if (has_input) {
-		ReadJSInput();
-	}
-#else
 	// Fallback: sleep 10 ms
 	Delay_usec(10000);
-#endif
-#endif
-#endif
+#endif // IDLE_USES_COND_WAIT
+#endif // IDLE_USES_SEMAPHORE
+#endif // EMSCRIPTEN
 }
 
 
@@ -398,6 +398,9 @@ void idle_wait(void)
 
 void idle_resume(void)
 {
+#ifdef EMSCRIPTEN
+	// Nothing is required for Emscripten
+#else
 #ifdef IDLE_USES_COND_WAIT
 	pthread_cond_signal(&idle_cond);
 #else
@@ -410,6 +413,7 @@ void idle_resume(void)
 		return;
 	}
 	UNLOCK_IDLE;
-#endif
-#endif
+#endif // IDLE_USES_COND_WAIT
+#endif // IDLE_USES_SEMAPHORE
+#endif // EMSCRIPTEN
 }
