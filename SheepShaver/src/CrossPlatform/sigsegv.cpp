@@ -2708,6 +2708,8 @@ template<typename T> void safeStore(uint32_t a, T d) {
 
 #endif
 
+#if defined(HAVE_SIGSEGV_RECOVERY) || defined(HAVE_MACH_EXCEPTIONS)
+
 // This function handles the badaccess to memory.
 // It is called from the signal handler or the exception handler.
 static bool handle_badaccess(SIGSEGV_FAULT_HANDLER_ARGLIST_1)
@@ -2816,7 +2818,7 @@ static bool handle_badaccess(SIGSEGV_FAULT_HANDLER_ARGLIST_1)
 
 	return false;
 }
-
+#endif // HAVE_SIGSEGV_RECOVERY || HAVE_MACH_EXCEPTIONS
 
 /*
  * There are two mechanisms for handling a bad memory access,

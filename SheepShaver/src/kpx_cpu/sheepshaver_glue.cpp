@@ -767,6 +767,10 @@ static void dump_disassembly(const uint32 pc, const int prefix_count, const int 
 
 sigsegv_return_t sigsegv_handler(sigsegv_info_t *sip)
 {
+#if EMSCRIPTEN
+	// Emscripten doesn't support sigsegv
+#else
+
 #if ENABLE_VOSF
 	// Handle screen fault
 	extern bool Screen_fault_handler(sigsegv_info_t *sip);
@@ -831,6 +835,7 @@ sigsegv_return_t sigsegv_handler(sigsegv_info_t *sip)
 	dump_log();
 	dump_disassembly(pc, 8, 8);
 
+#endif // EMSCRIPTEN
 	enter_mon();
 	QuitEmulator();
 
@@ -953,6 +958,31 @@ void TriggerInterrupt(void)
 	  ppc_cpu->trigger_interrupt();
 #endif
 }
+
+#ifdef EMSCRIPTEN
+void CheckTicks()
+{
+	static uint64 next_tick_usecs = GetTicks_usec() + 16625;
+	static uint64 tick_counter = 0;
+
+	uint64 tick_usecs = GetTicks_usec();
+	if (tick_usecs >= next_tick_usecs)
+	{
+		// Pseudo Mac 1Hz interrupt, update local time
+		if (++tick_counter > 60) {
+			tick_counter = 0;
+			WriteMacInt32(0x20c, TimerDateTime());
+		}
+
+		// Trigger 60Hz interrupt
+		if (ReadMacInt32(XLM_IRQ_NEST) == 0) {
+			SetInterruptFlag(INTFLAG_VIA);
+			TriggerInterrupt();
+		}
+		next_tick_usecs = tick_usecs + 16625;
+	}
+}
+#endif
 
 void HandleInterrupt(powerpc_registers *r)
 {

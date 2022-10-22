@@ -36,15 +36,8 @@ export LDFLAGS="$em_flags $em_ldflags"
   --disable-fbdev-dga \
   --disable-xf86-vidmode \
   --disable-xf86-dga \
-  --disable-jit-compiler \
-  --disable-asm-opts \
+  --disable-jit \
   --disable-vosf \
   --enable-emscripten \
   --build="`uname -m`-unknown-linux-gnu" \
-  --cache-file="/tmp/basiliskii.config.cache.emscripten${macemujs_conf_debug:-}"
-
-cat ./em_config.h >> ./config.h
-
-# use 'mostlyclean' because 'clean' will delete the generated CPU files
-# `make mostlyclean` is required when switching between native and web builds, to remove the native .o files
-make mostlyclean
+  --cache-file="/tmp/sheepshaver.config.cache.emscripten${macemujs_conf_debug:-}"
