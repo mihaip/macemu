@@ -74,6 +74,7 @@ prefs_desc common_prefs_items[] = {
 	{"sound_buffer", TYPE_INT32, false,	"sound buffer length"},
 	{"name_encoding", TYPE_INT32, false,	"file name encoding"},
 	{"init_grab", TYPE_BOOLEAN, false,	"initially grabbing mouse"},
+	{"jsfrequentreadinput", TYPE_BOOLEAN, false, "Read JS input frequently (multiple times per tick) to reduce latency"},
 	{NULL, TYPE_END, false, NULL} // End of list
 };
 

@@ -702,7 +702,7 @@ void powerpc_cpu::execute(uint32 entry)
 				}
 
 #if defined(SHEEPSHAVER) && defined(EMSCRIPTEN)
-				if (check_ticks_counter++ == 100000) {
+				if (check_ticks_counter++ == 50000) {
 					check_ticks_counter = 0;
 					CheckTicks();
 				}
@@ -752,7 +752,7 @@ void powerpc_cpu::execute(uint32 entry)
 			dump_registers();
 #endif
 #if defined(SHEEPSHAVER) && defined(EMSCRIPTEN)
-		if (check_ticks_counter++ == 100000) {
+		if (check_ticks_counter++ == 50000) {
 			check_ticks_counter = 0;
 			CheckTicks();
 		}

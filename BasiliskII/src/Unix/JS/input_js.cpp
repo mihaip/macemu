@@ -17,6 +17,7 @@ void ReadJSInput() {
         { return workerApi.getInputValue(workerApi.InputBufferAddresses.mouseButtonStateAddr); });
 
     if (mouse_button_state > -1) {
+      D(bug("[input_js] mouse button: state=%d\n", mouse_button_state));
       if (mouse_button_state == 0) {
         ADBMouseUp(0);
       } else {
@@ -34,6 +35,7 @@ void ReadJSInput() {
           { return workerApi.getInputValue(workerApi.InputBufferAddresses.mouseMoveYDeltaAddr); });
 
       if (dx > 0 || dy > 0) {
+        D(bug("[input_js] mouse move: dx=%d, dy=%d\n", dx, dy));
         ADBMouseMoved(dx, dy);
       }
     }
@@ -47,6 +49,7 @@ void ReadJSInput() {
       int keystate = EM_ASM_INT_V(
           { return workerApi.getInputValue(workerApi.InputBufferAddresses.keyStateAddr); });
 
+      D(bug("[input_js] key event: keycode=%d, keystate=%d\n", keycode, keystate));
       if (keystate == 0) {
         ADBKeyUp(keycode);
       } else {
@@ -57,6 +60,7 @@ void ReadJSInput() {
       return workerApi.getInputValue(workerApi.InputBufferAddresses.ethernetInterruptFlagAddr);
     });
     if (has_ethernet_interrupt) {
+      D(bug("[input_js] ethernet interrupt\n"));
       SetInterruptFlag(INTFLAG_ETHER);
       TriggerInterrupt();
     }
