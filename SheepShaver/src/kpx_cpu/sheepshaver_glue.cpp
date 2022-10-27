@@ -50,6 +50,10 @@
 #include <SDL_events.h>
 #endif
 
+#ifdef EMSCRIPTEN
+#include "JS/input_js.h"
+#endif
+
 #if ENABLE_MON
 #include "mon.h"
 #include "mon_disass.h"
@@ -962,12 +966,20 @@ void TriggerInterrupt(void)
 #ifdef EMSCRIPTEN
 void CheckTicks()
 {
+	static bool js_frequent_read_input = PrefsFindBool("jsfrequentreadinput");
 	static uint64 next_tick_usecs = GetTicks_usec() + 16625;
 	static uint64 tick_counter = 0;
+	if (js_frequent_read_input) {
+		ReadJSInput();
+	}
 
 	uint64 tick_usecs = GetTicks_usec();
 	if (tick_usecs >= next_tick_usecs)
 	{
+		if (!js_frequent_read_input) {
+			ReadJSInput();
+		}
+
 		// Pseudo Mac 1Hz interrupt, update local time
 		if (++tick_counter > 60) {
 			tick_counter = 0;

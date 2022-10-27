@@ -352,6 +352,10 @@ void VideoQuitFullScreen() {
 
 void VideoVBL(void) {
   VideoRefresh();
+
+  // Execute video VBL
+  if (private_data != NULL && private_data->interruptsEnabled)
+    VSLDoInterruptService(private_data->vslServiceID);
 }
 
 int16 video_mode_change(VidLocals* csSave, uint32 ParamPtr) {
