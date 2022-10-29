@@ -275,7 +275,7 @@ bool VideoInit(bool classic) {
 #endif
       VIDEO_MODE_ROW_BYTES = TrivialBytesPerRow(w, (video_depth)d);
       VIDEO_MODE_DEPTH = (video_depth)d;
-      D(bug("adding mode with %dx%d (ID %02x, index: %d), %d bpp\n", VIDEO_MODE_X, VIDEO_MODE_Y,
+      D(bug("adding mode with %dx%d (ID %02x, index: %lu), %d bpp\n", VIDEO_MODE_X, VIDEO_MODE_Y,
             VIDEO_MODE_RESOLUTION, video_modes.size(), 1 << (VIDEO_MODE_DEPTH & 0x0f)));
 
       video_modes.push_back(mode);
