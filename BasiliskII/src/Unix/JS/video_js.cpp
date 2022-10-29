@@ -94,6 +94,8 @@ class JS_monitor_desc : public monitor_desc {
                   video_depth default_depth,
                   uint32 default_id)
       : monitor_desc(available_modes, default_depth, default_id),
+        mac_framebuffer(NULL),
+        browser_framebuffer(NULL),
         last_blit_hash(0),
         last_palette_hash(0) {}
   ~JS_monitor_desc() {}
@@ -130,8 +132,8 @@ bool JS_monitor_desc::video_open() {
   D(bug("video_open()\n"));
   const VIDEO_MODE& mode = get_current_mode();
   D(bug("Current video mode:\n"));
-  D(bug(" %dx%d (ID %02x), %d bpp\n", VIDEO_MODE_X, VIDEO_MODE_Y, VIDEO_MODE_RESOLUTION,
-        1 << (VIDEO_MODE_DEPTH & 0x0f)));
+  D(bug(" %dx%d (ID %02x), %d bpp, %d bytes per row\n", VIDEO_MODE_X, VIDEO_MODE_Y,
+        VIDEO_MODE_RESOLUTION, 1 << (VIDEO_MODE_DEPTH & 0x0f), VIDEO_MODE_ROW_BYTES));
 
   mac_framebuffer_size = VIDEO_MODE_ROW_BYTES * VIDEO_MODE_Y;
   mac_framebuffer = (uint8*)malloc(mac_framebuffer_size);
@@ -147,6 +149,10 @@ bool JS_monitor_desc::video_open() {
   visualFormat.Rmask = 0xff00;
   visualFormat.Gmask = 0xff0000;
   visualFormat.Bmask = 0xff000000;
+  // Ensure that we don't end up Blit_Copy_Raw path for 1-bit copies in
+  // Screen_blitter_init (which  assumes that not using SDL means we're using
+  // X11).
+  visualFormat.fullscreen = true;
 
   is_raw_screen_blit = !Screen_blitter_init(visualFormat, true, 1 << (VIDEO_MODE_DEPTH & 0x0f));
   browser_framebuffer_size = VIDEO_MODE_Y * 4 * VIDEO_MODE_X;
@@ -275,8 +281,9 @@ bool VideoInit(bool classic) {
 #endif
       VIDEO_MODE_ROW_BYTES = TrivialBytesPerRow(w, (video_depth)d);
       VIDEO_MODE_DEPTH = (video_depth)d;
-      D(bug("adding mode with %dx%d (ID %02x, index: %lu), %d bpp\n", VIDEO_MODE_X, VIDEO_MODE_Y,
-            VIDEO_MODE_RESOLUTION, video_modes.size(), 1 << (VIDEO_MODE_DEPTH & 0x0f)));
+      D(bug("adding mode with %dx%d (ID %02x, index: %lu), %d bpp, %d bytes per row\n",
+            VIDEO_MODE_X, VIDEO_MODE_Y, VIDEO_MODE_RESOLUTION, video_modes.size(),
+            1 << (VIDEO_MODE_DEPTH & 0x0f), VIDEO_MODE_ROW_BYTES));
 
       video_modes.push_back(mode);
     }
