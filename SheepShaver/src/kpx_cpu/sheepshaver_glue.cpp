@@ -51,6 +51,7 @@
 #endif
 
 #ifdef EMSCRIPTEN
+#include "JS/audio_js.h"
 #include "JS/input_js.h"
 #endif
 
@@ -978,6 +979,11 @@ void CheckTicks()
 	{
 		if (!js_frequent_read_input) {
 			ReadJSInput();
+		}
+
+		// tuned (badly) for sr=22050 blocksize=4096
+		if (tick_counter % 11 == 0) {
+			AudioRefresh();
 		}
 
 		// Pseudo Mac 1Hz interrupt, update local time
