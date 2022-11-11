@@ -5,6 +5,14 @@ AC_INIT([Basilisk II], 1.0, [Christian.Bauer@uni-mainz.de], BasiliskII)
 AC_CONFIG_SRCDIR(main_unix.cpp)
 AC_PREREQ(2.52)
 AC_CONFIG_HEADER(config.h)
+AH_TOP(
+#if defined(__APPLE__)
+#include "../MacOSX/config.h"
+#else
+)
+AH_BOTTOM(
+#endif /* defined(__APPLE__) */
+)
 
 AC_USE_SYSTEM_EXTENSIONS
 
