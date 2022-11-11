@@ -37,6 +37,7 @@
 #include "video.h"
 #include "audio.h"
 #include "ether.h"
+#include "ether_helpers.h"
 #include "serial.h"
 #include "clip.h"
 #include "extfs.h"
@@ -104,6 +105,10 @@ bool InitAll(const char *vmdir)
 		XPRAM[0x1376] = 0x00;	// OSDefault = MacOS
 		XPRAM[0x1377] = 0x01;
 		XPRAM[0x138a] = 0x25;	// Use PPC memory manager ("Modern Memory Manager")
+	}
+
+	if (PrefsFindBool("appletalk")) {
+		enable_apple_talk_in_pram(XPRAM + 0x1300);
 	}
 
 	// Set boot volume

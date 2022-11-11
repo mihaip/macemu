@@ -46,6 +46,7 @@
 #include "prefs.h"
 #include "ether.h"
 #include "ether_defs.h"
+#include "ether_helpers.h"
 
 #ifndef NO_STD_NAMESPACE
 using std::map;
