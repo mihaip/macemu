@@ -93,21 +93,4 @@ static inline int ether_wds_to_buffer(uint32 wds, uint8 *p)
 	return len;
 }
 
-/*
- *  Check whether Ethernet address is AppleTalk or Ethernet broadcast address
- */
-
-static inline bool is_apple_talk_broadcast(uint8 *p)
-{
-	return p[0] == 0x09 && p[1] == 0x00 && p[2] == 0x07
-	    && p[3] == 0xff && p[4] == 0xff && p[5] == 0xff;
-}
-
-static inline bool is_ethernet_broadcast(uint8 *p)
-{
-	return p[0] == 0xff && p[1] == 0xff && p[2] == 0xff
-	    && p[3] == 0xff && p[4] == 0xff && p[5] == 0xff;
-}
-
-
 #endif

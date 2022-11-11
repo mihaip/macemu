@@ -7,11 +7,24 @@
 #include "cpu_emulation.h"
 #include "ether.h"
 #include "ether_defs.h"
+#include "ether_helpers.h"
 #include "macos_util.h"
 #include "main.h"
+#include "prefs.h"
 
 #define DEBUG 0
 #include "debug.h"
+
+#ifdef SHEEPSHAVER
+static bool net_open = false;  // Flag: initialization succeeded, network device open
+static uint8 ether_addr[6];    // Our Ethernet address
+
+// Error codes
+enum { eMultiErr = -91, eLenErr = -92, lapProtErr = -94, excessCollsns = -95 };
+
+#define ether_wds_to_buffer ether_msgb_to_buffer
+
+#endif
 
 static const uint8 GENERATED_ETHER_ADDR_PREFIX = 0xb2;
 
@@ -24,6 +37,8 @@ static void ether_addr_to_str(uint8* ether_addr, char* ether_addr_str) {
   sprintf(ether_addr_str, "%02x:%02x:%02x:%02x:%02x:%02x", ether_addr[0], ether_addr[1],
           ether_addr[2], ether_addr[3], ether_addr[4], ether_addr[5]);
 }
+
+#ifndef SHEEPSHAVER
 
 // Dispatch packet to protocol handler
 static void ether_dispatch_packet(uint32 p, uint32 length) {
@@ -63,6 +78,8 @@ static void ether_dispatch_packet(uint32 p, uint32 length) {
           handler, r.d[0], r.d[1], r.a[0], r.a[3], r.a[4]));
   Execute68k(handler, &r);
 }
+
+#endif
 
 bool ether_init(void) {
   // Construct random Ethernet address. JS has access to a better random
@@ -165,7 +182,77 @@ void EtherInterrupt(void) {
     if (length < 14) {
       return;
     }
-
+#ifdef SHEEPSHAVER
+    if (!ether_driver_opened) {
+      // We can't dispatch packets before the ethernet driver is initialized
+      // (ether_dispatch_packet_tvect is not initialized yet), don't do anything
+      // for now.
+      D(bug("Dropping Ethernet packet of %d bytes, driver has not been opened yet\n", length));
+      continue;
+    }
+#endif
     ether_dispatch_packet(packet, length);
   }
 }
+
+// SheepShaver glue
+#ifdef SHEEPSHAVER
+
+void EtherInit(void) {
+  net_open = false;
+
+  if (PrefsFindBool("nonet")) {
+    return;
+  }
+
+  net_open = ether_init();
+}
+
+void EtherExit(void) {
+  ether_exit();
+  net_open = false;
+}
+
+void AO_get_ethernet_address(uint32 arg) {
+  uint8* addr = Mac2HostAddr(arg);
+  if (net_open)
+    OTCopy48BitAddress(ether_addr, addr);
+  else {
+    addr[0] = 0x12;
+    addr[1] = 0x34;
+    addr[2] = 0x56;
+    addr[3] = 0x78;
+    addr[4] = 0x9a;
+    addr[5] = 0xbc;
+  }
+  D(bug("AO_get_ethernet_address: got address %02x%02x%02x%02x%02x%02x\n", addr[0], addr[1],
+        addr[2], addr[3], addr[4], addr[5]));
+}
+
+void AO_enable_multicast(uint32 addr) {
+  // No-op
+}
+
+void AO_disable_multicast(uint32 addr) {
+  // No-op
+}
+
+void AO_transmit_packet(uint32 mp) {
+  if (net_open) {
+    switch (ether_write(mp)) {
+      case noErr:
+        num_tx_packets++;
+        break;
+      case excessCollsns:
+        num_tx_buffer_full++;
+        break;
+    }
+  }
+}
+
+void EtherIRQ(void) {
+  num_ether_irq++;
+  EtherInterrupt();
+}
+
+#endif  // SHEEPSHAVER
