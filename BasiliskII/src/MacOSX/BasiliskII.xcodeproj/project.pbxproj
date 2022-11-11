@@ -264,6 +264,7 @@
 		757A2BEF1F5AF9D6003EDB01 /* user_strings_unix.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = user_strings_unix.cpp; sourceTree = "<group>"; };
 		75CBCF741F5DB3AD00830063 /* video_sdl2.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = video_sdl2.cpp; sourceTree = "<group>"; };
 		75CBCF761F5DB65E00830063 /* video_sdl.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = video_sdl.cpp; sourceTree = "<group>"; };
+		917C4D5D291EF745004BB091 /* ether_helpers.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ether_helpers.h; sourceTree = "<group>"; };
 		E40CEEC420D7910D00BCB88D /* SDLMain.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SDLMain.h; sourceTree = "<group>"; };
 		E40CEEC520D7910E00BCB88D /* SDLMain.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SDLMain.m; sourceTree = "<group>"; };
 		E413D8F820D260B900E437D8 /* tftp.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = tftp.c; sourceTree = "<group>"; };
@@ -433,6 +434,7 @@
 		7539DFCC1F23B25A006B2DF2 /* CrossPlatform */ = {
 			isa = PBXGroup;
 			children = (
+				917C4D5D291EF745004BB091 /* ether_helpers.h */,
 				7539DFCD1F23B25A006B2DF2 /* sigsegv.cpp */,
 				7539DFCE1F23B25A006B2DF2 /* sigsegv.h */,
 				7539DFCF1F23B25A006B2DF2 /* video_blit.cpp */,
@@ -1054,7 +1056,6 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
 				LIBRARY_SEARCH_PATHS = /usr/local/lib;
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
-				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = "";
 				OTHER_LDFLAGS = "";
 				"OTHER_LDFLAGS[arch=arm64]" = (
