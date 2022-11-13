@@ -39,6 +39,7 @@ export LDFLAGS="$em_flags $em_ldflags"
   --disable-jit-compiler \
   --disable-asm-opts \
   --disable-vosf \
+  --enable-uae_cpu_2021 \
   --enable-emscripten \
   --build="`uname -m`-unknown-linux-gnu" \
   --cache-file="/tmp/basiliskii.config.cache.emscripten${macemujs_conf_debug:-}"

@@ -48,8 +48,9 @@ AC_ARG_WITH(sdl1,            [  --with-sdl1             use SDL 1.x, rather than
 AC_ARG_WITH(sdl3,            [  --with-sdl3             use SDL 3.x, rather than SDL 2.x [default=no]], [WANT_SDL_VERSION_MAJOR=3], [])
 
 dnl Emscripten options.
-AC_ARG_ENABLE(emscripten,     [  --enable-emscripten      Emscripten is the real target [default=no]], [WANT_EMSCRIPTEN=$enableval], [WANT_EMSCRIPTEN=no])
+AC_ARG_ENABLE(emscripten,     [  --enable-emscripten    Emscripten is the real target [default=no]], [WANT_EMSCRIPTEN=$enableval], [WANT_EMSCRIPTEN=no])
 AC_ARG_ENABLE(asm-opts,       [  --enable-asm-opts      Assembly optimizations for CPU emulation [default=yes]], [WANT_ASM_OPTS=$enableval], [WANT_ASM_OPTS=yes])
+AC_ARG_ENABLE(uae_cpu_2021,   [  --enable-uae_cpu_2021  Always use the uae_cpu_2021 emulator [default=no]], [WANT_UAE_CPU_2021=$enableval], [WANT_UAE_CPU_2021=no])
 
 dnl JIT compiler options.
 AC_ARG_ENABLE(jit-compiler,  [  --enable-jit-compiler   enable JIT compiler [default=yes]], [WANT_JIT=$enableval], [WANT_JIT=yes])
@@ -1676,7 +1677,7 @@ elif [[ "x$WANT_NATIVE_M68K" = "xyes" ]]; then
   CPUSRCS="asm_support.s"
 fi
 
-if [[ "$target_cpu" = "arm" -o "$target_cpu" = "aarch64" ]]; then
+if [[ "$target_cpu" = "arm" -o "$target_cpu" = "aarch64" -o "x$WANT_UAE_CPU_2021" = "xyes" ]]; then
   UAE_PATH="../uae_cpu_2021"
 else
   UAE_PATH="../uae_cpu"
@@ -1922,7 +1923,7 @@ dnl UAE CPU sources for all non-m68k-native architectures.
 if [[ "x$WANT_NATIVE_M68K" = "xno" ]]; then
   CPUINCLUDES="-I$UAE_PATH"
   CPUSRCS="$UAE_PATH/basilisk_glue.cpp $UAE_PATH/memory.cpp $UAE_PATH/newcpu.cpp $UAE_PATH/readcpu.cpp $FPUSRCS cpustbl.cpp cpudefs.cpp $CPUSRCS $JITSRCS"
-  if [[ "$target_cpu" = "arm" -o "$target_cpu" = "aarch64" ]]; then
+  if [[ "$target_cpu" = "arm" -o "$target_cpu" = "aarch64" -o "x$WANT_UAE_CPU_2021" = "xyes" ]]; then
     CPUSRCS="$CPUSRCS cpufunctbl.cpp"
 	DEFINES="$DEFINES -DUPDATE_UAE"
   fi
