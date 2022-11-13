@@ -10,6 +10,7 @@ set -euo pipefail
   --disable-jit-compiler \
   --disable-asm-opts \
   --disable-vosf \
+  --enable-uae_cpu_2021 \
   --build="`uname -m`-unknown-linux-gnu" \
   --cache-file=/tmp/config.cache.native
 
