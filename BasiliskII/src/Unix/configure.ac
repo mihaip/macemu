@@ -1872,11 +1872,16 @@ for fpe in $FPE_CORE_TEST_ORDER; do
   ieee)
     case $ac_cv_c_float_format in
     IEEE*)
-      if [[ "$target_cpu" = "arm" -o "$target_cpu" = "aarch64" ]]; then
+      if [[ "$target_cpu" = "arm" -o "$target_cpu" = "aarch64" -o "x$WANT_EMSCRIPTEN" = "xyes" ]]; then
         FPE_CORE="IEEE fpu core (MPFR)"
         DEFINES="$DEFINES -DFPU_MPFR"
         FPUSRCS="$UAE_PATH/fpu/fpu_mpfr.cpp"
 	    LIBS="$LIBS -lgmp -lmpfr"
+        if [[ "x$WANT_EMSCRIPTEN" = "xyes" ]]; then
+          dnl Emscripten version of gmp and mpfr built by _em_build_mpfr.sh
+          CPPFLAGS="$CPPFLAGS -I/emlibs/include"
+          LDFLAGS="$LDFLAGS -L/emlibs/lib"
+        fi
 	  else
         FPE_CORE="IEEE fpu core"
         DEFINES="$DEFINES -DFPU_IEEE"
