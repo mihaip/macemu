@@ -114,6 +114,7 @@ class JS_monitor_desc : public monitor_desc {
   uint8* browser_framebuffer;
   size_t browser_framebuffer_size;
   bool is_raw_screen_blit;
+  bool is_16_to_32_blit;
   uint64 last_blit_hash;
   uint64 last_palette_hash;
 };
@@ -143,18 +144,26 @@ bool JS_monitor_desc::video_open() {
 
   set_mac_frame_base((unsigned int)Host2MacAddr((uint8*)mac_framebuffer));
 
-  VisualFormat visualFormat;
-  visualFormat.depth = 32;
-  // Magic values to force a Blit_Copy_Raw in 32-bit mode.
-  visualFormat.Rmask = 0xff00;
-  visualFormat.Gmask = 0xff0000;
-  visualFormat.Bmask = 0xff000000;
-  // Ensure that we don't end up Blit_Copy_Raw path for 1-bit copies in
-  // Screen_blitter_init (which  assumes that not using SDL means we're using
-  // X11).
-  visualFormat.fullscreen = true;
+  if (VIDEO_MODE_DEPTH == VIDEO_DEPTH_16BIT) {
+    // video_blit.cpp does not have a 16-to-32-bit blitter, so we have a custom
+    // blitting path for it.
+    is_raw_screen_blit = false;
+    is_16_to_32_blit = true;
+  } else {
+    VisualFormat visualFormat;
+    visualFormat.depth = 32;
+    // Magic values to force a Blit_Copy_Raw in 32-bit mode.
+    visualFormat.Rmask = 0xff00;
+    visualFormat.Gmask = 0xff0000;
+    visualFormat.Bmask = 0xff000000;
+    // Ensure that we don't end up Blit_Copy_Raw path for 1-bit copies in
+    // Screen_blitter_init (which  assumes that not using SDL means we're using
+    // X11).
+    visualFormat.fullscreen = true;
 
-  is_raw_screen_blit = !Screen_blitter_init(visualFormat, true, 1 << (VIDEO_MODE_DEPTH & 0x0f));
+    is_raw_screen_blit = !Screen_blitter_init(visualFormat, true, 1 << (VIDEO_MODE_DEPTH & 0x0f));
+    is_16_to_32_blit = false;
+  }
   browser_framebuffer_size = VIDEO_MODE_Y * 4 * VIDEO_MODE_X;
   browser_framebuffer = (uint8*)malloc(browser_framebuffer_size);
   if (browser_framebuffer == NULL) {
@@ -172,11 +181,32 @@ void JS_monitor_desc::video_close() {
   free(browser_framebuffer);
 }
 
+// Convert 16-bit RGB 555 to 32-bit RGB 888
+static void Blit_Copy_16_To_32(uint8* dest, const uint8* source, uint32 length) {
+  uint32 dest_index = 0;
+  for (uint32 source_index = 0; source_index < length; source_index += 2) {
+    // Invert endianess
+    uint16 pixel555 = source[source_index + 1] | (source[source_index] << 8);
+    uint8 red5 = (pixel555 & 0x7c00) >> 10;
+    uint8 green5 = (pixel555 & 0x3e0) >> 5;
+    uint8 blue5 = (pixel555 & 0x1f);
+
+    uint8 red8 = (red5 * 255 + 15) / 31;
+    uint8 green8 = (green5 * 255 + 15) / 31;
+    uint8 blue8 = (blue5 * 255 + 15) / 31;
+
+    dest[dest_index++] = red8;
+    dest[dest_index++] = green8;
+    dest[dest_index++] = blue8;
+    dest[dest_index++] = 0xff;
+  }
+}
+
 void JS_monitor_desc::video_blit() {
   const VIDEO_MODE& mode = get_current_mode();
 
   uint64 hash = SpookyHash::Hash64(mac_framebuffer, mac_framebuffer_size, 0);
-  if (!is_raw_screen_blit) {
+  if (!is_raw_screen_blit && !is_16_to_32_blit) {
     hash ^= last_palette_hash;
   }
   if (hash == last_blit_hash) {
@@ -187,7 +217,9 @@ void JS_monitor_desc::video_blit() {
   }
   last_blit_hash = hash;
 
-  if (is_raw_screen_blit) {
+  if (is_16_to_32_blit) {
+    Blit_Copy_16_To_32(browser_framebuffer, mac_framebuffer, mac_framebuffer_size);
+  } else if (is_raw_screen_blit) {
     // Offset by 1 to go from ARGB to RGBA (we don't actually care about the
     // alpha, it should be the same for all pixels)
     memcpy(browser_framebuffer, mac_framebuffer + 1, mac_framebuffer_size - 1);
