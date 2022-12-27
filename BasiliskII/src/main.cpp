@@ -40,6 +40,10 @@
 #include "prefs.h"
 #include "main.h"
 
+#ifdef EMSCRIPTEN
+#include "pram_helpers.h"
+#endif
+
 #define DEBUG 0
 #include "debug.h"
 
@@ -136,6 +140,10 @@ bool InitAll(const char *vmdir)
 	if (PrefsFindBool("appletalk")) {
 		enable_apple_talk_in_pram(XPRAM);
 	}
+
+#ifdef EMSCRIPTEN
+	SetDefaultAlertSound();
+#endif
 
 	// Set boot volume
 	int16 i16 = PrefsFindInt32("bootdrive");
