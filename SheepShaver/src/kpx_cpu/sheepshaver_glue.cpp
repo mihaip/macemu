@@ -53,6 +53,7 @@
 #ifdef EMSCRIPTEN
 #include "JS/audio_js.h"
 #include "JS/input_js.h"
+#include "pram_helpers.h"
 #endif
 
 #if ENABLE_MON
@@ -965,6 +966,7 @@ void TriggerInterrupt(void)
 }
 
 #ifdef EMSCRIPTEN
+
 void CheckTicks()
 {
 	static bool js_frequent_read_input = PrefsFindBool("jsfrequentreadinput");
@@ -988,6 +990,7 @@ void CheckTicks()
 
 		// Pseudo Mac 1Hz interrupt, update local time
 		if (++tick_counter > 60) {
+			CheckPRAM(0x1300);
 			tick_counter = 0;
 			WriteMacInt32(0x20c, TimerDateTime());
 		}

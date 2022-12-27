@@ -101,6 +101,7 @@ using std::string;
 #include <emscripten.h>
 #include "JS/input_js.h"
 #include "JS/audio_js.h"
+#include "pram_helpers.h"
 #endif
 
 
@@ -1278,6 +1279,9 @@ static void one_tick(...)
 {
 	static int tick_counter = 0;
 	if (++tick_counter > 60) {
+#if defined(EMSCRIPTEN)
+		CheckPRAM(0);
+#endif
 		tick_counter = 0;
 		one_second();
 	}
