@@ -268,7 +268,11 @@ bool VideoInit(bool classic) {
   // default to a 512x342 1-bit display, but we ignore that.
   int default_width = 640;
   int default_height = 480;
+#ifdef SHEEPSHAVER
+  int default_depth = VIDEO_DEPTH_32BIT;
+#else
   int default_depth = VIDEO_DEPTH_8BIT;
+#endif
   const char* mode_str = PrefsFindString("screen");
   if (mode_str) {
     if (sscanf(mode_str, "win/%d/%d", &default_width, &default_height) != 2)
