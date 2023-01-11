@@ -25,19 +25,17 @@ void ReadJSInput() {
       }
     }
 
-    int has_mouse_move = EM_ASM_INT_V(
-        { return workerApi.getInputValue(workerApi.InputBufferAddresses.mouseMoveFlagAddr); });
-    if (has_mouse_move) {
-      int dx = EM_ASM_INT_V(
-          { return workerApi.getInputValue(workerApi.InputBufferAddresses.mouseMoveXDeltaAddr); });
+    int has_mouse_position = EM_ASM_INT_V(
+        { return workerApi.getInputValue(workerApi.InputBufferAddresses.mousePositionFlagAddr); });
+    if (has_mouse_position) {
+      int mouseX = EM_ASM_INT_V(
+          { return workerApi.getInputValue(workerApi.InputBufferAddresses.mousePositionXAddr); });
 
-      int dy = EM_ASM_INT_V(
-          { return workerApi.getInputValue(workerApi.InputBufferAddresses.mouseMoveYDeltaAddr); });
+      int mouseY = EM_ASM_INT_V(
+          { return workerApi.getInputValue(workerApi.InputBufferAddresses.mousePositionYAddr); });
 
-      if (dx > 0 || dy > 0) {
-        D(bug("[input_js] mouse move: dx=%d, dy=%d\n", dx, dy));
-        ADBMouseMoved(dx, dy);
-      }
+      D(bug("[input_js] mouse move: dx=%d, dy=%d\n", mouseX, mouseY));
+      ADBMouseMoved(mouseX, mouseY);
     }
 
     int has_key_event = EM_ASM_INT_V(
