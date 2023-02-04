@@ -15,4 +15,6 @@ set -euo pipefail
   --cache-file=/tmp/config.cache.native
 
 make clean
-make -j6 cpuemu.cpp
+# Make sure that CPU generator for other architectures are cleaned up.
+rm -rf obj/*
+make -j8 cpuemu.cpp
