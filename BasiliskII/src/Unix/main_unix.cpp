@@ -350,6 +350,7 @@ void cpu_do_check_ticks(void)
 	static bool js_frequent_read_input = PrefsFindBool("jsfrequentreadinput");
 	if (js_frequent_read_input) {
 		ReadJSInput();
+		AudioRefresh();
 	}
 #endif
 
@@ -375,6 +376,7 @@ void cpu_do_check_ticks(void)
 #ifdef EMSCRIPTEN
 		if (!js_frequent_read_input) {
 			ReadJSInput();
+			AudioRefresh();
 		}
 #endif
 		one_tick();
@@ -1280,7 +1282,7 @@ static void one_tick(...)
 	static int tick_counter = 0;
 	if (++tick_counter > 60) {
 #if defined(EMSCRIPTEN)
-		CheckPRAM(0);
+		CheckPRAM();
 #endif
 		tick_counter = 0;
 		one_second();
@@ -1289,13 +1291,6 @@ static void one_tick(...)
 #ifndef USE_PTHREADS_SERVICES
 	// Threads not used to trigger interrupts, perform video refresh from here
 	VideoRefresh();
-#endif
-
-#if defined(EMSCRIPTEN)
-	// tuned (badly) for sr=22050 blocksize=4096
-	if (tick_counter % 11 == 0) {
-		AudioRefresh();
-	}
 #endif
 
 #if !defined(HAVE_PTHREADS) && !defined(EMSCRIPTEN)
