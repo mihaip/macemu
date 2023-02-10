@@ -18,7 +18,7 @@ static int audio_channel_count_index = 0;
 
 // Global variables
 static int sound_buffer_size;  // Size of sound buffer in bytes
-static int16* sound_buffer = NULL;
+static uint8* sound_buffer = NULL;
 
 // Set AudioStatus to reflect current audio stream format
 static void set_audio_status_format(void) {
@@ -47,21 +47,28 @@ static bool open_audio(void) {
     audio_channel_count_index = audio_channel_counts.size() - 1;
   }
 
-  // Sound buffer size = 4096 frames
-  audio_frames_per_block = 4096;
+  // The audio worklet API processes things in 128 frame chunks. Have some
+  // buffer to make sure we don't starve it, but don't buffer too much either,
+  // to avoid latency. Use a larger one for SheepShaver, since it seems to
+  // invoke the audio interrupt less frequently.
+#ifdef SHEEPSHAVER
+  audio_frames_per_block = 1024;
+#else
+  audio_frames_per_block = 384;
+#endif
 
   int opt_sr = (audio_sample_rates[audio_sample_rate_index] >> 16);
   int opt_ss = audio_sample_sizes[audio_sample_size_index];
   int opt_ch = audio_channel_counts[audio_channel_count_index];
 
-  EM_ASM_({ workerApi.openAudio($0, $1, $2, $3); }, opt_sr, opt_ss, opt_ch, audio_frames_per_block);
+  EM_ASM_({ workerApi.didOpenAudio($0, $1, $2, $3, $4); }, opt_sr, opt_ss, opt_ch);
 
   sound_buffer_size = (audio_sample_sizes[audio_sample_size_index] >> 3) *
                       audio_channel_counts[audio_channel_count_index] * audio_frames_per_block;
   if (sound_buffer) {
-    delete[] sound_buffer;
+    free(sound_buffer);
   }
-  sound_buffer = new int16[sound_buffer_size / 2];
+  sound_buffer = (uint8 *)malloc(sound_buffer_size);
   set_audio_status_format();
 
   audio_open = true;
@@ -71,7 +78,7 @@ static bool open_audio(void) {
 static void close_audio(void) {
   audio_open = false;
   if (sound_buffer) {
-    delete[] sound_buffer;
+    free(sound_buffer);
     sound_buffer = NULL;
   }
 }
@@ -134,17 +141,13 @@ void AudioInterrupt(void) {
   int work_size = sample_count * (AudioStatus.sample_size >> 3) * AudioStatus.channels;
   D(bug("stream: work_size %d\n", work_size));
   if (work_size > sound_buffer_size) {
-    D(bug("  work_size (%d) > sound_buffer_size (%d), truncating\n", work_size, sound_buffer_size));
+    printf("  work_size (%d) > sound_buffer_size (%d), truncating\n", work_size, sound_buffer_size);
     work_size = sound_buffer_size;
   }
 
-  int16* p = (int16*)Mac2HostAddr(ReadMacInt32(apple_stream_info + scd_buffer));
-  for (int i = 0; i < work_size / 2; i++) {
-    sound_buffer[i] = ntohs(p[i]);
-  }
-  // Fill remaining buffer with silence.
-  memset((uint8*)sound_buffer + work_size, 0, sound_buffer_size - work_size);
-  EM_ASM_INT({ return workerApi.enqueueAudio($0, $1); }, sound_buffer, sound_buffer_size);
+  uint8* mac_sound_buffer = Mac2HostAddr(ReadMacInt32(apple_stream_info + scd_buffer));
+  memcpy(sound_buffer, mac_sound_buffer, work_size);
+  EM_ASM_({  workerApi.enqueueAudio($0, $1); }, sound_buffer, work_size);
   D(bug("stream: data written\n"));
 }
 
@@ -204,7 +207,27 @@ void audio_set_speaker_volume(uint32 vol) {
 }
 
 void AudioRefresh() {
-  if (AudioStatus.num_sources) {
+  if (InterruptFlags & INTFLAG_AUDIO) {
+    // Already have an audio interrupt pending, don't need to request another
+    // one.
+    return;
+  }
+  // Make sure that any buffered audio is drained even after we're normally done
+  // playing.
+  static int close_grace_period = 0;
+  if (!AudioStatus.num_sources) {
+    if (close_grace_period == 0) {
+      return;
+    }
+    close_grace_period--;
+    SetInterruptFlag(INTFLAG_AUDIO);
+    return;
+  }
+  close_grace_period = 10;
+
+  // Let the JS side get ahead a bit, in case we can't feed it fast enough.
+  int jsAudioBufferSize = EM_ASM_INT_V({ return workerApi.audioBufferSize(); });
+  if (jsAudioBufferSize < sound_buffer_size * 4) {
     SetInterruptFlag(INTFLAG_AUDIO);
   }
 }

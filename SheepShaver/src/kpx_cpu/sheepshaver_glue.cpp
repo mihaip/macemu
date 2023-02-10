@@ -974,6 +974,7 @@ void CheckTicks()
 	static uint64 tick_counter = 0;
 	if (js_frequent_read_input) {
 		ReadJSInput();
+		AudioRefresh();
 	}
 
 	uint64 tick_usecs = GetTicks_usec();
@@ -981,16 +982,13 @@ void CheckTicks()
 	{
 		if (!js_frequent_read_input) {
 			ReadJSInput();
-		}
-
-		// tuned (badly) for sr=22050 blocksize=4096
-		if (tick_counter % 11 == 0) {
 			AudioRefresh();
 		}
 
+
 		// Pseudo Mac 1Hz interrupt, update local time
 		if (++tick_counter > 60) {
-			CheckPRAM(0x1300);
+			CheckPRAM();
 			tick_counter = 0;
 			WriteMacInt32(0x20c, TimerDateTime());
 		}
