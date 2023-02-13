@@ -17,4 +17,5 @@ set -euo pipefail
 make clean
 # Make sure that CPU generator for other architectures are cleaned up.
 rm -rf obj/*
+mkdir -p obj
 make -j8 cpuemu.cpp
