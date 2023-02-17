@@ -382,6 +382,10 @@ void Set_pthread_attr(pthread_attr_t *attr, int priority);
 #endif
 
 /* UAE CPU defines */
+#if defined(EMSCRIPTEN)
+static const uint32 EMSCRIPTEN_HEAP_SIZE = 1 << 28; // Matches 256MB INITIAL_MEMORY in _emconfigure.sh
+#endif
+
 #ifdef WORDS_BIGENDIAN
 
 #ifdef CPU_CAN_ACCESS_UNALIGNED
@@ -447,8 +451,26 @@ static inline void do_put_mem_word(uae_u16 *a, uae_u32 v) {*a = (v >> 8) | (v <<
 #else /* CPU_CAN_ACCESS_UNALIGNED */
 
 /* Other little-endian CPUs which can not do unaligned accesses (this needs optimization) */
-static inline uae_u32 do_get_mem_long(uae_u32 *a) {uint8 *b = (uint8 *)a; return (b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3];}
-static inline uae_u32 do_get_mem_word(uae_u16 *a) {uint8 *b = (uint8 *)a; return (b[0] << 8) | b[1];}
+static inline uae_u32 do_get_mem_long(uae_u32 *a) {
+#if defined(EMSCRIPTEN)
+	if ((uint32) a > EMSCRIPTEN_HEAP_SIZE) {
+		printf("do_get_mem_long(%p) out of bounds (EMSCRIPTEN_HEAP_SIZE=0x%x), returning 0\n", a, EMSCRIPTEN_HEAP_SIZE);
+		return 0;
+	}
+#endif
+	uint8 *b = (uint8 *)a;
+	return (b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3];
+}
+static inline uae_u32 do_get_mem_word(uae_u16 *a) {
+#if defined(EMSCRIPTEN)
+	if ((uint32) a > EMSCRIPTEN_HEAP_SIZE) {
+		printf("do_get_mem_word(%p) out of bounds (EMSCRIPTEN_HEAP_SIZE=0x%x), returning 0\n", a, EMSCRIPTEN_HEAP_SIZE);
+		return 0;
+	}
+#endif
+	uint8 *b = (uint8 *)a;
+	return (b[0] << 8) | b[1];
+}
 static inline void do_put_mem_long(uae_u32 *a, uae_u32 v) {uint8 *b = (uint8 *)a; b[0] = v >> 24; b[1] = v >> 16; b[2] = v >> 8; b[3] = v;}
 static inline void do_put_mem_word(uae_u16 *a, uae_u32 v) {uint8 *b = (uint8 *)a; b[0] = v >> 8; b[1] = v;}
 
@@ -466,7 +488,17 @@ static inline uae_u32 do_byteswap_16(uae_u32 v)
 	{ return (((v >> 8) & 0xff) | ((v & 0xff) << 8)); }
 #endif
 
+#if defined(EMSCRIPTEN)
+static inline uae_u32 do_get_mem_byte(uae_u8 *a) {
+	if ((uint32) a > EMSCRIPTEN_HEAP_SIZE) {
+		printf("do_get_mem_byte(%p) out of bounds (EMSCRIPTEN_HEAP_SIZE=0x%x), returning 0\n", a, EMSCRIPTEN_HEAP_SIZE);
+		return 0;
+	}
+	return (uae_u32)*((uae_u8 *)(a));
+}
+#else
 #define do_get_mem_byte(a) ((uae_u32)*((uae_u8 *)(a)))
+#endif
 #define do_put_mem_byte(a, v) (*(uae_u8 *)(a) = (v))
 
 #define call_mem_get_func(func, addr) ((*func)(addr))
