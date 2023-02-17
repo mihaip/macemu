@@ -39,5 +39,5 @@ export LDFLAGS="$em_flags $em_ldflags"
   --disable-jit \
   --disable-vosf \
   --enable-emscripten \
-  --build="`uname -m`-unknown-linux-gnu" \
+  --build="asmjs-unknown-linux-gnu" \
   --cache-file="/tmp/sheepshaver.config.cache.emscripten${macemujs_conf_debug:-}"
