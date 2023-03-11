@@ -52,6 +52,11 @@ static uint32 find_rsrc_data(const uint8 *rsrc, uint32 max, const uint8 *search,
 	return 0;
 }
 
+static bool has_idle_time = false;
+
+bool HasIdleTime() {
+	return has_idle_time;
+}
 
 /*
  *  Install SynchIdleTime() patch
@@ -74,6 +79,7 @@ static void patch_idle_time(uint8 *p, uint32 size, int n = 1)
 			*p16 = htons(M68K_NOP);
 			FlushCodeCache(pbase + base, 4);
 			D(bug("  patch %d applied\n", n));
+			has_idle_time = true;
 		}
 	}
 }

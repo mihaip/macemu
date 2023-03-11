@@ -102,6 +102,7 @@ using std::string;
 #include "JS/input_js.h"
 #include "JS/audio_js.h"
 #include "pram_helpers.h"
+#include "rsrc_patches.h"
 #endif
 
 
@@ -1297,6 +1298,13 @@ static void one_tick(...)
 		SetInterruptFlag(INTFLAG_60HZ);
 		TriggerInterrupt();
 	}
+
+#if defined(EMSCRIPTEN)
+	if (!HasIdleTime()) {
+		FallbackSleep();
+	}
+#endif
+
 }
 
 #ifdef USE_PTHREADS_SERVICES

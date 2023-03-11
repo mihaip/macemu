@@ -66,3 +66,7 @@ void ReadJSInput() {
     EM_ASM({ workerApi.releaseInputLock(); });
   }
 }
+
+void FallbackSleep() {
+    EM_ASM_({ workerApi.sleep(0.001); });
+}
