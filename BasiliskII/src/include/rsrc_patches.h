@@ -22,5 +22,6 @@
 #define RSRC_PATCHES_H
 
 extern void CheckLoad(uint32 type, int16 id, uint8 *p, uint32 size);
+extern bool HasIdleTime();
 
 #endif
