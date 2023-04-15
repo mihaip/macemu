@@ -801,7 +801,7 @@ if [[ "x$WANT_EMSCRIPTEN" = "xyes" ]]; then
   SCSISRC=../dummy/scsi_dummy.cpp
   ETHERSRC=JS/ether_js.cpp
   AUDIOSRC=JS/audio_js.cpp
-  EXTRASYSSRCS="$EXTRASYSSRCS JS/input_js.cpp JS/clip_js.cpp"
+  EXTRASYSSRCS="$EXTRASYSSRCS JS/input_js.cpp JS/clip_js.cpp JS/disk_js.cpp"
   AC_DEFINE(EMSCRIPTEN, 1, [Define if targeting Emscripten.])
 fi
 

@@ -57,7 +57,9 @@
 #include "user_strings.h"
 #include "sys.h"
 #include "disk_unix.h"
-
+#if defined(EMSCRIPTEN)
+#include "JS/disk_js.h"
+#endif
 #if defined(BINCUE)
 #include "bincue.h"
 #endif
@@ -68,6 +70,9 @@
 #include "debug.h"
 
 static disk_factory *disk_factories[] = {
+#if defined(EMSCRIPTEN)
+	disk_js_factory,
+#endif
 #ifndef STANDALONE_GUI
 	disk_sparsebundle_factory,
 #if defined(HAVE_LIBVHD)
@@ -575,9 +580,11 @@ void *Sys_open(const char *name, bool read_only, bool is_cdrom)
 
 	D(bug("Sys_open(%s, %s)\n", name, read_only ? "read-only" : "read/write"));
 
+#if !defined(EMSCRIPTEN)
 	// Check if write access is allowed, set read-only flag if not
 	if (!read_only && access(name, W_OK))
 		read_only = true;
+#endif
 
 	// Print warning message and eventually unmount drive when this is an HFS volume mounted under Linux (double mounting will corrupt the volume)
 	char mount_name[256];
