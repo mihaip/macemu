@@ -24,6 +24,21 @@ struct disk_js : disk_generic {
         return read_only;
     }
 
+    virtual bool is_media_present() {
+        bool is_media_present = EM_ASM_INT({
+            return workerApi.disks.isMediaPresent($0);
+        }, disk_id) > 0;
+        D(bug("disk_js.size: disk_id=%d is_media_present=%s\n", disk_id, is_media_present ? "true" : "false"));
+        return is_media_present;
+    }
+
+    virtual void eject() {
+        EM_ASM({
+            workerApi.disks.eject($0);
+        }, disk_id);
+        D(bug("disk_js.size: disk_id=%d eject\n", disk_id));
+    }
+
     virtual loff_t size() {
         int size = EM_ASM_INT({
             return workerApi.disks.size($0);
