@@ -626,9 +626,11 @@ void *Sys_open(const char *name, bool read_only)
 		if (st == disk_generic::DISK_VALID) {
 			mac_file_handle *fh = open_filehandle(name);
 			fh->generic_disk = generic;
-			fh->file_size = generic->size();
 			fh->read_only = generic->is_read_only();
-			fh->is_media_present = true;
+			fh->is_media_present = generic->is_media_present();
+			if (fh->is_media_present) {
+				fh->file_size = generic->size();
+			}
 			sys_add_mac_file_handle(fh);
 			return fh;
 		}
@@ -820,7 +822,7 @@ loff_t SysGetFileSize(void *arg)
 #endif 
 
 	if (fh->generic_disk)
-		return fh->file_size;
+		return fh->generic_disk->size();
 
 	if (fh->is_file)
 		return fh->file_size;
@@ -905,6 +907,11 @@ void SysEject(void *arg)
 		fh->is_media_present = false;
 	}
 #endif
+#if defined(EMSCRIPTEN)
+	if (fh->generic_disk && fh->generic_disk->is_media_present()) {
+		fh->generic_disk->eject();
+	}
+#endif
 }
 
 
@@ -980,8 +987,8 @@ bool SysIsDiskInserted(void *arg)
 		return false;
 
 	if (fh->generic_disk)
-		return true;
-	
+		return fh->generic_disk->is_media_present();
+
 	if (fh->is_file) {
 		return true;
 

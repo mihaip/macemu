@@ -37,6 +37,13 @@ struct disk_generic {
 	virtual size_t read(void *buf, loff_t offset, size_t length) = 0;
 	virtual size_t write(void *buf, loff_t offset, size_t length) = 0;
 	virtual loff_t size() = 0;
+
+	// By default generic disks are not removable, but some subclasses can
+	// override this.
+	virtual bool is_media_present() {
+		return true;
+	}
+	virtual void eject() { }
 };
 
 typedef disk_generic::status (disk_factory)(const char *path, bool read_only,
