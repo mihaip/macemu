@@ -1,6 +1,8 @@
 #!/bin/bash
 set -euo pipefail
 
+source /emsdk/emsdk_env.sh
+
 mkdir -p /emlibs
 cd /tmp
 
