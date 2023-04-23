@@ -822,7 +822,7 @@ yes|"guessing yes")
   ETHERSRC=ether_unix.cpp
   ;;
 esac
-if [[ -n "$CAN_SLIRP" ]]; then
+if [[ -n "$CAN_SLIRP" -a "x$WANT_EMSCRIPTEN" = "xno" ]]; then
   AC_DEFINE(HAVE_SLIRP, 1, [Define if slirp library is supported])
   SLIRP_SRCS="\
     ../slirp/bootp.c     ../slirp/ip_output.c  ../slirp/tcp_input.c  \

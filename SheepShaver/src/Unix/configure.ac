@@ -731,7 +731,7 @@ yes|"guessing yes")
   ETHERSRC=ether_unix.cpp
   ;;
 esac
-if [[ -n "$CAN_SLIRP" ]]; then
+if [[ -n "$CAN_SLIRP" -a "x$WANT_EMSCRIPTEN" = "xno" ]]; then
   AC_DEFINE(HAVE_SLIRP, 1, [Define if slirp library is supported])
   SLIRP_SRCS="\
     ../slirp/bootp.c     ../slirp/ip_output.c  ../slirp/tcp_input.c  \
@@ -950,12 +950,6 @@ AC_CACHE_CHECK([whether mmap supports MAP_ANONYMOUS],
   AC_LANG_RESTORE
   ]
 )
-dnl Feature detection of MAP_ANONYMOUS does not work when using the emscripten
-dnl compiler (because we can't run the test binary) -- hardcode it to being 
-dnl enabled.
-if [[ "x$WANT_EMSCRIPTEN" = "xyes" ]]; then
-  ac_cv_mmap_anonymous=yes
-fi
 AC_TRANSLATE_DEFINE(HAVE_MMAP_ANONYMOUS, "$ac_cv_mmap_anonymous",
   [Define if <sys/mman.h> defines MAP_ANONYMOUS and mmap()'ing with MAP_ANONYMOUS works.])
 
