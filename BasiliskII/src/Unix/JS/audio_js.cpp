@@ -68,7 +68,7 @@ static bool open_audio(void) {
   if (sound_buffer) {
     free(sound_buffer);
   }
-  sound_buffer = (uint8 *)malloc(sound_buffer_size);
+  sound_buffer = (uint8*)malloc(sound_buffer_size);
   set_audio_status_format();
 
   audio_open = true;
@@ -147,7 +147,7 @@ void AudioInterrupt(void) {
 
   uint8* mac_sound_buffer = Mac2HostAddr(ReadMacInt32(apple_stream_info + scd_buffer));
   memcpy(sound_buffer, mac_sound_buffer, work_size);
-  EM_ASM_({  workerApi.enqueueAudio($0, $1); }, sound_buffer, work_size);
+  EM_ASM_({ workerApi.enqueueAudio($0, $1); }, sound_buffer, work_size);
   D(bug("stream: data written\n"));
 }
 
