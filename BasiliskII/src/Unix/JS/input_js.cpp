@@ -68,5 +68,5 @@ void ReadJSInput() {
 }
 
 void FallbackSleep() {
-    EM_ASM_({ workerApi.sleep(0.001); });
+  EM_ASM_({ workerApi.sleep(0.001); });
 }
