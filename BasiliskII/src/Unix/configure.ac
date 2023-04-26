@@ -757,7 +757,7 @@ ETHERSRC=../dummy/ether_dummy.cpp
 SCSISRC=../dummy/scsi_dummy.cpp
 AUDIOSRC=../dummy/audio_dummy.cpp
 EXTFSSRC=extfs_unix.cpp
-EXTRASYSSRCS=macroman.cpp
+EXTRASYSSRCS="macjapanese.cpp macroman.cpp"
 CAN_NATIVE_M68K=no
 case "$target_os" in
 linux*)

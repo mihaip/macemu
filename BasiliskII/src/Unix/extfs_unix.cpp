@@ -28,8 +28,10 @@
 #include <utime.h>
 
 #include "sysdeps.h"
+#include "prefs.h"
 #include "extfs.h"
 #include "extfs_defs.h"
+#include "macjapanese.h"
 #include "macroman.h"
 
 #define DEBUG 0
@@ -390,11 +392,23 @@ bool extfs_rename(const char *old_path, const char *new_path)
 // Convert from the host OS filename encoding to MacRoman
 const char *host_encoding_to_macroman(const char *filename)
 {
-	return utf8_to_macroman(filename, strlen(filename));
+	switch (PrefsFindInt32("name_encoding")) {
+		case 0:		// MacRoman
+			return utf8_to_macroman(filename, strlen(filename));
+		case 1: 	// MacJapanese
+			return utf8_to_macjapanese(filename, strlen(filename));
+	}
+	return filename;
 }
 
 // Convert from MacRoman to host OS filename encoding
 const char *macroman_to_host_encoding(const char *filename)
 {
-	return macroman_to_utf8(filename, strlen(filename));
+	switch (PrefsFindInt32("name_encoding")) {
+		case 0:		// MacRoman
+			return macroman_to_utf8(filename, strlen(filename));
+		case 1: 	// MacJapanese
+			return macjapanese_to_utf8(filename, strlen(filename));
+	}
+	return filename;
 }
