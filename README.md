@@ -21,3 +21,11 @@ This repository contains multiple branches, the notable ones are:
 -   [infinite-mac-kanjitalk755](https://github.com/mihaip/macemu/commits/infinite-mac-kanjitalk755): Current Infinite Mac work, based on the [kanjitalk755/macemu](https://github.com/kanjitalk755/macemu) fork of Basilisk II and SheepShaver.
 -   [bas-emscripten-release](https://github.com/mihaip/macemu/commits/bas-emscripten-release): Initial Infinite Mac work, based on James Friend's [jsdf/macemu](https://github.com/jsdf/macemu) fork.
 -   [infinite-mac-jsdf](https://github.com/mihaip/macemu/commits/infinite-mac-jsdf): Squashed version of the work done in the `bas-emscripten-release` branch, so that it could serve as a starting point for the `infinite-mac-kanjitalk755` work.
+
+To sync with the upstream `kanjitalk755/macemu` fork, run:
+
+```sh
+git remote add upstream-kanjitalk755 https://github.com/kanjitalk755/macemu.git
+git fetch upstream-kanjitalk755
+git rebase --committer-date-is-author-date upstream-kanjitalk755/master
+```
