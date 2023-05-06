@@ -538,5 +538,9 @@ static inline uae_u32 do_get_mem_byte(uae_u8 *a) {
 #define PRECISE_TIMING 1
 #define PRECISE_TIMING_MACH 1
 #endif
+#if defined(EMSCRIPTEN)
+#define PRECISE_TIMING 1
+#define PRECISE_TIMING_EMSCRIPTEN 1
+#endif
 
 #endif

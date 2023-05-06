@@ -33,6 +33,10 @@
 #include <mach/mach.h>
 #endif
 
+#ifdef PRECISE_TIMING_EMSCRIPTEN
+#include <emscripten.h>
+#endif
+
 #define DEBUG 0
 #include "debug.h"
 
@@ -84,6 +88,11 @@ static tm_time_t wakeup_time_max = { 0x7fffffff, 999999999 };
 static tm_time_t wakeup_time = wakeup_time_max;
 static semaphore_t wakeup_time_sem;
 static void *timer_func(void *arg);
+#endif
+#ifdef PRECISE_TIMING_EMSCRIPTEN
+static pthread_t timer_thread;
+static tm_time_t wakeup_time_max = { 0x7fffffff, 999999999 };
+static tm_time_t wakeup_time = wakeup_time_max;
 #endif
 #endif
 
@@ -673,3 +682,14 @@ void TimerInterrupt(void)
 #endif
 #endif
 }
+
+#ifdef PRECISE_TIMING_EMSCRIPTEN
+void CheckJSTimer() {
+	tm_time_t system_time;
+	timer_current_time(system_time);
+	if (timer_cmp_time(wakeup_time, system_time) < 0) {
+		SetInterruptFlag(INTFLAG_TIMER);
+		TriggerInterrupt();
+	}
+}
+#endif

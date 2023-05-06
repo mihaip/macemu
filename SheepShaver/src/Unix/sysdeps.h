@@ -434,6 +434,10 @@ typedef struct timeval tm_time_t;
 #define PRECISE_TIMING 1
 #define PRECISE_TIMING_MACH 1
 #endif
+#if defined(EMSCRIPTEN)
+#define PRECISE_TIMING 1
+#define PRECISE_TIMING_EMSCRIPTEN 1
+#endif
 
 // Timing functions
 extern uint64 GetTicks_usec(void);

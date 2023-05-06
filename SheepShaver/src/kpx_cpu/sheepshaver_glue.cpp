@@ -51,6 +51,7 @@
 #endif
 
 #ifdef EMSCRIPTEN
+#include "timer.h"
 #include "JS/audio_js.h"
 #include "JS/input_js.h"
 #include "pram_helpers.h"
@@ -975,6 +976,7 @@ void CheckTicks()
 	if (js_frequent_read_input) {
 		ReadJSInput();
 		AudioRefresh();
+		CheckJSTimer();
 	}
 
 	uint64 tick_usecs = GetTicks_usec();
@@ -983,6 +985,7 @@ void CheckTicks()
 		if (!js_frequent_read_input) {
 			ReadJSInput();
 			AudioRefresh();
+			CheckJSTimer();
 		}
 
 

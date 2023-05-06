@@ -352,6 +352,7 @@ void cpu_do_check_ticks(void)
 	if (js_frequent_read_input) {
 		ReadJSInput();
 		AudioRefresh();
+		CheckJSTimer();
 	}
 #endif
 
@@ -378,6 +379,7 @@ void cpu_do_check_ticks(void)
 		if (!js_frequent_read_input) {
 			ReadJSInput();
 			AudioRefresh();
+			CheckJSTimer();
 		}
 #endif
 		one_tick();

@@ -46,4 +46,8 @@ extern int32 timer_host2mac_time(tm_time_t hosttime);
 extern void idle_wait(void);
 extern void idle_resume(void);
 
+#ifdef EMSCRIPTEN
+extern void CheckJSTimer();
+#endif
+
 #endif
