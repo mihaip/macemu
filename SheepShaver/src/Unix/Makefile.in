@@ -11,6 +11,8 @@ datadir = @datadir@
 mandir = @mandir@
 man1dir = $(mandir)/man1
 
+EMSCRIPTEN = @EMSCRIPTEN@
+
 DESTDIR =
 
 CC = @CC@
@@ -81,6 +83,15 @@ PROGS += $(GUI_APP_EXE)
 else
 CXXFLAGS += $(GUI_CFLAGS)
 LIBS += $(GUI_LIBS)
+endif
+
+ifeq ($(EMSCRIPTEN),yes)
+	# We can't specify these flags in _emconfigure.sh because then the autoconf
+	# tests will fail (the version of node that they conftest program is run
+	# under does not support modules).
+	LDFLAGS += -s INITIAL_MEMORY=268435456 # 256 MB
+	LDFLAGS += -s MODULARIZE -s EXPORT_ES6 -s EXPORT_NAME=emulator
+	LDFLAGS += -s EXPORTED_RUNTIME_METHODS=FS
 endif
 
 ## Rules
