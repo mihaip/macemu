@@ -89,7 +89,7 @@ ifeq ($(EMSCRIPTEN),yes)
 	# We can't specify these flags in _emconfigure.sh because then the autoconf
 	# tests will fail (the version of node that they conftest program is run
 	# under does not support modules).
-	LDFLAGS += -s INITIAL_MEMORY=268435456 # 256 MB
+	LDFLAGS += -s INITIAL_MEMORY=301989888 # 256 MB max for emulated Mac RAM, plus 32 MB of emulator overhead
 	LDFLAGS += -s MODULARIZE -s EXPORT_ES6 -s EXPORT_NAME=emulator
 	LDFLAGS += -s EXPORTED_RUNTIME_METHODS=FS
 endif

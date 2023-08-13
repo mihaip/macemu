@@ -383,7 +383,7 @@ void Set_pthread_attr(pthread_attr_t *attr, int priority);
 
 /* UAE CPU defines */
 #if defined(EMSCRIPTEN)
-static const uint32 EMSCRIPTEN_HEAP_SIZE = 1 << 28; // Matches 256MB INITIAL_MEMORY in _emconfigure.sh
+static const uint32 EMSCRIPTEN_HEAP_SIZE = (1 << 28) + (1 << 25); // Matches 256MB + 32MB INITIAL_MEMORY in _emconfigure.sh
 #endif
 
 #ifdef WORDS_BIGENDIAN
