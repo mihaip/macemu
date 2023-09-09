@@ -61,7 +61,7 @@ static bool open_audio(void) {
   int opt_ss = audio_sample_sizes[audio_sample_size_index];
   int opt_ch = audio_channel_counts[audio_channel_count_index];
 
-  EM_ASM_({ workerApi.didOpenAudio($0, $1, $2, $3, $4); }, opt_sr, opt_ss, opt_ch);
+  EM_ASM_({ workerApi.didOpenAudio($0, $1, $2); }, opt_sr, opt_ss, opt_ch);
 
   sound_buffer_size = (audio_sample_sizes[audio_sample_size_index] >> 3) *
                       audio_channel_counts[audio_channel_count_index] * audio_frames_per_block;
