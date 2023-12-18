@@ -1309,8 +1309,8 @@ static void one_tick(...)
 
 }
 
-#ifdef USE_PTHREADS_SERVICES
 bool tick_inhibit;
+#ifdef USE_PTHREADS_SERVICES
 static void *tick_func(void *arg)
 {
 	uint64 start = GetTicks_usec();
