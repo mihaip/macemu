@@ -25,6 +25,13 @@ struct disk_js : disk_generic {
     return is_media_present;
   }
 
+  virtual bool is_fixed_disk() {
+    bool is_fixed_disk = EM_ASM_INT({ return workerApi.disks.isFixedDisk($0); }, disk_id) > 0;
+    D(bug("disk_js.size: disk_id=%d is_fixed_disk=%s\n", disk_id,
+          is_fixed_disk ? "true" : "false"));
+    return is_fixed_disk;
+  }
+
   virtual void eject() {
     EM_ASM({ workerApi.disks.eject($0); }, disk_id);
     D(bug("disk_js.size: disk_id=%d eject\n", disk_id));

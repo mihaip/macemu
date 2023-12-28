@@ -43,6 +43,9 @@ struct disk_generic {
 	virtual bool is_media_present() {
 		return true;
 	}
+	virtual bool is_fixed_disk() {
+		return true;
+	}
 	virtual void eject() { }
 };
 

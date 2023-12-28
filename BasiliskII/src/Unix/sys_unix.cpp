@@ -965,7 +965,7 @@ bool SysIsFixedDisk(void *arg)
 		return true;
 
 	if (fh->generic_disk)
-		return true;
+		return fh->generic_disk->is_fixed_disk();
 
 	if (fh->is_file)
 		return true;
