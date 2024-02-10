@@ -10,6 +10,8 @@
 #define DEBUG 0
 #include "debug.h"
 
+static bool use_mouse_deltas = false;
+
 void ReadJSInput() {
   int lock = EM_ASM_INT_V({ return workerApi.acquireInputLock(); });
   if (lock) {
@@ -28,14 +30,28 @@ void ReadJSInput() {
     int has_mouse_position = EM_ASM_INT_V(
         { return workerApi.getInputValue(workerApi.InputBufferAddresses.mousePositionFlagAddr); });
     if (has_mouse_position) {
-      int mouseX = EM_ASM_INT_V(
+      int mousePosX = EM_ASM_INT_V(
           { return workerApi.getInputValue(workerApi.InputBufferAddresses.mousePositionXAddr); });
-
-      int mouseY = EM_ASM_INT_V(
+      int mouseDeltaX = EM_ASM_INT_V(
+          { return workerApi.getInputValue(workerApi.InputBufferAddresses.mouseDeltaXAddr); });
+      int mousePosY = EM_ASM_INT_V(
           { return workerApi.getInputValue(workerApi.InputBufferAddresses.mousePositionYAddr); });
+      int mouseDeltaY = EM_ASM_INT_V(
+          { return workerApi.getInputValue(workerApi.InputBufferAddresses.mouseDeltaYAddr); });
+      int mouseX = use_mouse_deltas ? mouseDeltaX : mousePosX;
+      int mouseY = use_mouse_deltas ? mouseDeltaY : mousePosY;
 
-      D(bug("[input_js] mouse move: dx=%d, dy=%d\n", mouseX, mouseY));
+      D(bug("[input_js] mouse move: x=%d, y=%d\n", mouseX, mouseY));
       ADBMouseMoved(mouseX, mouseY);
+    }
+
+    int has_use_mouse_deltas = EM_ASM_INT_V(
+      { return workerApi.getInputValue(workerApi.InputBufferAddresses.useMouseDeltasFlagAddr); });
+    if (has_use_mouse_deltas) {
+      use_mouse_deltas = EM_ASM_INT_V(
+        { return workerApi.getInputValue(workerApi.InputBufferAddresses.useMouseDeltasAddr); });
+      D(bug("[input_js] use mouse deltas: %d\n", use_mouse_deltas));
+      ADBSetRelMouseMode(use_mouse_deltas);
     }
 
     int has_key_event = EM_ASM_INT_V(
