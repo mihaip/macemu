@@ -38,6 +38,8 @@ ifeq ($(EMSCRIPTEN),yes)
 	LDFLAGS += -s INITIAL_MEMORY=301989888 # 256 MB max for emulated Mac RAM, plus 32 MB of emulator overhead
 	LDFLAGS += -s MODULARIZE -s EXPORT_ES6 -s EXPORT_NAME=emulator
 	LDFLAGS += -s EXPORTED_RUNTIME_METHODS=FS
+	LDFLAGS += -s ENVIRONMENT=worker
+	LDFLAGS += -flto
 	# Breaks emscripten because it can't link with libm.a or SDL (which are
 	# built for the host OS)
 	SKIP_LIBS = -lm -lSDL -L/usr/lib/x86_64-linux-gnu -L/usr/lib/aarch64-linux-gnu
