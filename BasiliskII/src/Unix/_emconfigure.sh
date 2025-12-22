@@ -6,10 +6,12 @@ em_ldflags=""
 
 em_defines=""
 if [[ -z "${macemujs_conf_debug:-}" ]]; then
-  em_flags+=" -O3 -gsource-map"
+  em_flags+=" -O3 -gsource-map -g2"
+  em_ldflags+=" -lexports.js"
 else
   echo "Debug build"
-  em_flags+=" -O0 -gsource-map"
+  em_flags+=" -O0 -gsource-map -g2"
+  em_ldflags+=" -lexports.js"
   em_ldflags+=" -s ASSERTIONS=2 "
   em_ldflags+=" -s DEMANGLE_SUPPORT=1"
   em_defines+=" -DDEBUG"
