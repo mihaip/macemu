@@ -383,6 +383,20 @@ void cpu_do_check_ticks(void)
 		}
 #endif
 		one_tick();
+#ifdef EMSCRIPTEN
+		// The CPU is between instructions here; the synchronous reader must
+		// finish before execution resumes. No RAM copy is needed.
+		EM_ASM({
+			const inspector = workerApi.inspector;
+			if (inspector) {
+				if (!Module.inspectorInitialized) {
+					inspector.initialize("BasiliskII");
+					Module.inspectorInitialized = true;
+				}
+				inspector.tick(HEAPU8.subarray($0, $0 + $1));
+			}
+		}, RAMBaseHost, RAMSize);
+#endif
 		do {
 			next += 16625;
 		} while (next < now);

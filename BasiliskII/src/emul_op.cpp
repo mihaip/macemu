@@ -42,6 +42,10 @@
 #include "extfs.h"
 #include "emul_op.h"
 
+#ifdef EMSCRIPTEN
+#include <emscripten.h>
+#endif
+
 #ifdef ENABLE_MON
 #include "mon.h"
 #endif
@@ -546,6 +550,16 @@ void EmulOp(uint16 opcode, M68kRegisters *r)
 			uint8 *p = Mac2HostAddr(adr);
 			uint32 size = ReadMacInt32(adr - 8) & 0xffffff;
 			CheckLoad(type, id, p, size);
+#ifdef EMSCRIPTEN
+			// Observe the final bytes after compatibility patches. The inspector
+			// treats this as a bounded hint, not a new resource-map snapshot.
+			EM_ASM({
+				const inspector = workerApi.inspector;
+				if (inspector) {
+					inspector.resourceLoaded(HEAPU8.subarray($0, $0 + $1), $2, $3, $4, $5);
+				}
+			}, RAMBaseHost, RAMSize, type, id, r->a[0], r->a[2]);
+#endif
 			break;
 		}
 

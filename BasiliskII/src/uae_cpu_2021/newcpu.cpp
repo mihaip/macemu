@@ -32,6 +32,9 @@
   */
 
 #include "sysdeps.h"
+#ifdef EMSCRIPTEN
+#include <emscripten.h>
+#endif
 #include <cassert>
 
 #include "cpu_emulation.h"
@@ -1259,6 +1262,20 @@ static void rts68000()
 void REGPARAM2 op_illg (uae_u32 opcode)
 {
 	if ((opcode & 0xF000) == 0xA000) {
+#ifdef EMSCRIPTEN
+        // Observe CloseResFile before A-line dispatch mutates the map chain.
+        // Include the Toolbox auto-pop variant; do not decode guest arguments.
+        if ((opcode & 0xFDFF) == 0xA99A) {
+            EM_ASM({
+                try {
+                    workerApi.inspector?.beforeResourceFileClose(
+                        HEAPU8.subarray($0, $0 + $1));
+                } catch (_) {
+                    // Instrumentation must never prevent the guest trap.
+                }
+            }, RAMBaseHost, RAMSize);
+        }
+#endif
 #if 0
 		if (opcode == 0xa0ff)
 		{
