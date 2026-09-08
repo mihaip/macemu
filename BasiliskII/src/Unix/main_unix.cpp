@@ -386,7 +386,8 @@ void cpu_do_check_ticks(void)
 #ifdef EMSCRIPTEN
 		// The CPU is between instructions here; the synchronous reader must
 		// finish before execution resumes. No RAM copy is needed.
-		EM_ASM({
+		extern bool ResourceCallsActive;
+		ResourceCallsActive = EM_ASM_INT({
 			const inspector = workerApi.inspector;
 			if (inspector) {
 				if (!Module.inspectorInitialized) {
@@ -394,7 +395,9 @@ void cpu_do_check_ticks(void)
 					Module.inspectorInitialized = true;
 				}
 				inspector.tick(HEAPU8.subarray($0, $0 + $1));
+				return inspector.active();
 			}
+			return false;
 		}, RAMBaseHost, RAMSize);
 #endif
 		do {

@@ -552,7 +552,7 @@ void EmulOp(uint16 opcode, M68kRegisters *r)
 			CheckLoad(type, id, p, size);
 #ifdef EMSCRIPTEN
 			// Observe the final bytes after compatibility patches. The inspector
-			// treats this as a bounded hint, not a new resource-map snapshot.
+			// records an immutable event before the guest can release the data.
 			EM_ASM({
 				const inspector = workerApi.inspector;
 				if (inspector) {

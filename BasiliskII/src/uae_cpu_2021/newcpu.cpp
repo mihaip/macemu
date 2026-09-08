@@ -34,6 +34,7 @@
 #include "sysdeps.h"
 #ifdef EMSCRIPTEN
 #include <emscripten.h>
+#include <vector>
 #endif
 #include <cassert>
 
@@ -1259,22 +1260,79 @@ static void rts68000()
 }
 #endif
 
+#ifdef EMSCRIPTEN
+// Updated at the ordinary emulator tick. No JS calls or memory scans in the
+// instruction loop while the Resources inspector is closed or paused.
+bool ResourceCallsActive = false;
+struct ResourceCall {
+    uae_u32 trap, pc, sp;
+};
+static std::vector<ResourceCall> resource_calls;
+
+static void resource_call_observed(uae_u32 trap, bool returning, uae_u32 pc)
+{
+    EM_ASM({
+        try {
+            workerApi.inspector?.callObserved(
+                HEAPU8.subarray($0, $0 + $1), $2, !!$3, 0, 0, 0, $4);
+        } catch (_) { /* Observation must not alter guest execution. */ }
+    }, RAMBaseHost, RAMSize, trap, returning, pc);
+}
+
+static void resource_call_enter(uae_u32 opcode)
+{
+    if (!ResourceCallsActive) return;
+    // Resource Manager plus common Toolbox consumers. Observe both sides:
+    // some calls load and dispose data entirely between periodic samples.
+    switch (opcode & 0xfbff) {
+        case 0xa992: case 0xa997: case 0xa998: case 0xa999: case 0xa99a:
+        case 0xa99b: case 0xa99d: case 0xa9a0: case 0xa9a1: case 0xa9a2:
+        case 0xa9a3: case 0xa9ab: case 0xa9ad: case 0xa9b0: case 0xa9c4:
+        case 0xa80e: case 0xa81a: case 0xa81f: case 0xa820: case 0xa97c:
+        case 0xa985: case 0xa986: case 0xa987: case 0xa988: case 0xa9b8:
+        case 0xa9b9: case 0xa9ba: case 0xa9bb: case 0xa9bc: case 0xa9bd:
+        case 0xa9be: case 0xa9bf: case 0xa9c0: case 0xaa1e: case 0xaa46:
+        case 0xa80c: case 0xa822: case 0xaa0c: case 0xaa1b:
+            break;
+        default: return;
+    }
+    const uae_u32 pc = m68k_getpc();
+    uae_u32 return_pc = pc + 2, sp = m68k_areg(regs, 7);
+    if (opcode & 0x0400) {
+        // Toolbox auto-pop: the caller's return address is on the stack.
+        if (sp > RAMSize - 4) return;
+        return_pc = ReadMacInt32(sp);
+        sp += 4;
+    }
+    resource_call_observed(opcode, false, pc);
+    if (resource_calls.size() >= 4096) resource_calls.erase(resource_calls.begin());
+    resource_calls.push_back({opcode, return_pc, sp});
+}
+
+static void resource_call_returns(uae_u32 pc)
+{
+    if (!ResourceCallsActive) {
+        resource_calls.clear();
+        return;
+    }
+    const uae_u32 sp = m68k_areg(regs, 7);
+    for (size_t i = resource_calls.size(); i > 0; --i) {
+        const auto call = resource_calls[i - 1];
+        // Pascal traps clean up their arguments. Limit the accepted stack
+        // change to a small argument frame; a different process can share PC.
+        if (call.pc == pc && sp >= call.sp && sp - call.sp <= 64) {
+            resource_calls.erase(resource_calls.begin() + i - 1);
+            resource_call_observed(call.trap, true, pc);
+        }
+    }
+}
+#endif
+
 void REGPARAM2 op_illg (uae_u32 opcode)
 {
 	if ((opcode & 0xF000) == 0xA000) {
 #ifdef EMSCRIPTEN
-        // Observe CloseResFile before A-line dispatch mutates the map chain.
-        // Include the Toolbox auto-pop variant; do not decode guest arguments.
-        if ((opcode & 0xFDFF) == 0xA99A) {
-            EM_ASM({
-                try {
-                    workerApi.inspector?.beforeResourceFileClose(
-                        HEAPU8.subarray($0, $0 + $1));
-                } catch (_) {
-                    // Instrumentation must never prevent the guest trap.
-                }
-            }, RAMBaseHost, RAMSize);
-        }
+        resource_call_enter(opcode);
 #endif
 #if 0
 		if (opcode == 0xa0ff)
@@ -1525,6 +1583,9 @@ void m68k_do_execute (void)
     uae_u32 opcode;
     for (;;) {
 	regs.fault_pc = pc = m68k_getpc();
+#ifdef EMSCRIPTEN
+    if (ResourceCallsActive || !resource_calls.empty()) resource_call_returns(pc);
+#endif
 #ifdef FULL_HISTORY
 #ifdef NEED_TO_DEBUG_BADLY
 	history[lasthist] = regs;
