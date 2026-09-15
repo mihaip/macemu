@@ -50,7 +50,7 @@ using std::vector;
 
 
 // Check for inserted disks by polling?
-#ifdef AMIGA
+#if defined(AMIGA) || defined(EMSCRIPTEN)
 #define DISK_INSERT_CHECK 1
 #else
 #define DISK_INSERT_CHECK 0
