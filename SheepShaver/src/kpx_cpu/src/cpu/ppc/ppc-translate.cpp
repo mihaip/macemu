@@ -1141,6 +1141,8 @@ powerpc_cpu::compile_block(uint32 entry_point)
 			typedef void (*func_t)(dyngen_cpu_base);
 			func_t func = &powerpc_cpu::call_execute_invalidate_cache_range;
 			dg.gen_invoke_CPU(func);
+			// isync ends the block; resume by fetching its successor afresh.
+			dg.gen_set_PC_im(dpc + 4);
 			break;
 		}
 		case PPC_I(MTCRF):		// Move to Condition Register Fields

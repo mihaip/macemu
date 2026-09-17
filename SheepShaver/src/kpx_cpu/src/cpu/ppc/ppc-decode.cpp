@@ -508,7 +508,8 @@ const powerpc_cpu::instr_info_t powerpc_cpu::powerpc_ii_table[] = {
 	{ "isync",
 	  EXECUTE_0(isync),
 	  PPC_I(ISYNC),
-	  X_form, 19, 150, CFLOW_NORMAL
+	  // Subsequent instructions must be fetched again after cache invalidation.
+	  X_form, 19, 150, CFLOW_TRAP
 	},
 	{ "lbz",
 	  EXECUTE_LOADSTORE(nop, RA_or_0, D, true, 1, false, false),

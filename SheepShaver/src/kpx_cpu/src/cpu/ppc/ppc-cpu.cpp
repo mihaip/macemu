@@ -675,8 +675,10 @@ void powerpc_cpu::execute(uint32 entry)
 				}
 			} while ((ii->cflow & CFLOW_END_BLOCK) == 0);
 			bi->end_pc = dpc;
-			bi->min_pc = dpc;
-			bi->max_pc = entry;
+			// Track this block, not the entry point of the execute() call,
+			// so flushing replaced code also invalidates its first instructions.
+			bi->min_pc = bi->pc;
+			bi->max_pc = dpc;
 			bi->size = di - bi->di;
 			my_block_cache.add_to_cl_list(bi);
 			my_block_cache.add_to_active_list(bi);

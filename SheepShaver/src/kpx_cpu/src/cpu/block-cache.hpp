@@ -119,38 +119,21 @@ void block_cache< block_info, block_allocator >::clear()
 template< class block_info, template<class T> class block_allocator >
 void block_cache< block_info, block_allocator >::clear_range(uintptr start, uintptr end)
 {
-	if (!active)
+	if (!active || start >= end)
 		return;
 
-	entry *p, *q;
-	if (cacheline(start) < cacheline(end - 1)) {
-		// Optimize for short ranges flush
-		const int end_cl = cacheline(end - 1);
-		for (int cl = cacheline(start); cl <= end_cl; cl++) {
-			p = cache_tags[cl];
-			while (p) {
-				q = p;
-				p = p->next_same_cl;
-				if (q->intersect(start, end)) {
-					q->invalidate();
-					remove_from_cl_list(q);
-					remove_from_list(q);
-					delete_blockinfo(q);
-				}
-			}
-		}
-	}
-	else {
-		p = active;
-		while (p) {
-			q = p;
-			p = p->next;
-			if (q->intersect(start, end)) {
-				q->invalidate();
-				remove_from_cl_list(q);
-				remove_from_list(q);
-				delete_blockinfo(q);
-			}
+	// Blocks are hashed only by their entry point. A block can overlap the
+	// flushed range even when its entry point is outside it, and large ranges
+	// can wrap around the hash table. Check every active block's bounds.
+	entry *p = active;
+	while (p) {
+		entry *q = p;
+		p = p->next;
+		if (q->intersect(start, end)) {
+			q->invalidate();
+			remove_from_cl_list(q);
+			remove_from_list(q);
+			delete_blockinfo(q);
 		}
 	}
 }
