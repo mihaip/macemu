@@ -36,6 +36,7 @@ ifeq ($(EMSCRIPTEN),yes)
 	# tests will fail (the version of node that they conftest program is run
 	# under does not support modules).
 	LDFLAGS += -s INITIAL_MEMORY=301989888 # 256 MB max for emulated Mac RAM, plus 32 MB of emulator overhead
+	LDFLAGS += -s EXIT_RUNTIME=1
 	LDFLAGS += -s MODULARIZE -s EXPORT_ES6 -s EXPORT_NAME=emulator
 	LDFLAGS += -s EXPORTED_RUNTIME_METHODS=FS,HEAPU8
 	LDFLAGS += -s EXPORTED_FUNCTIONS=[\"_malloc\",\"_free\",\"_main\"]
