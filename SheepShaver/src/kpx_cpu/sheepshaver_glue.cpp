@@ -50,7 +50,7 @@
 #include <SDL_events.h>
 #endif
 
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
 #include "timer.h"
 #include "JS/audio_js.h"
 #include "JS/input_js.h"
@@ -774,7 +774,7 @@ static void dump_disassembly(const uint32 pc, const int prefix_count, const int 
 
 sigsegv_return_t sigsegv_handler(sigsegv_info_t *sip)
 {
-#if EMSCRIPTEN
+#if __EMSCRIPTEN__
 	// Emscripten doesn't support sigsegv
 #else
 
@@ -842,7 +842,7 @@ sigsegv_return_t sigsegv_handler(sigsegv_info_t *sip)
 	dump_log();
 	dump_disassembly(pc, 8, 8);
 
-#endif // EMSCRIPTEN
+#endif // __EMSCRIPTEN__
 	enter_mon();
 	QuitEmulator();
 
@@ -966,7 +966,7 @@ void TriggerInterrupt(void)
 #endif
 }
 
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
 
 void CheckTicks()
 {

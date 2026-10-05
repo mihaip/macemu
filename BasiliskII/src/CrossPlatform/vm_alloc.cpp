@@ -284,7 +284,7 @@ void * vm_acquire(size_t size, int options)
 		return VM_MAP_FAILED;
 #endif
 // Emscripten does not support location hints for mmap.
-#ifndef EMSCRIPTEN
+#ifndef __EMSCRIPTEN__
 	next_address = (char *)addr + size;
 #endif
 #elif defined(HAVE_WIN32_VM)

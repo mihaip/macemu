@@ -579,7 +579,7 @@ void powerpc_cpu::execute(uint32 entry)
 #if PPC_EXECUTE_DUMP_STATE
 	const bool dump_state = true;
 #endif
-#if defined(SHEEPSHAVER) && defined(EMSCRIPTEN)
+#if defined(SHEEPSHAVER) && defined(__EMSCRIPTEN__)
     uint32 check_ticks_counter = 0;
 #endif
 	execute_depth++;
@@ -703,7 +703,7 @@ void powerpc_cpu::execute(uint32 entry)
 					} while (--n > 0);
 				}
 
-#if defined(SHEEPSHAVER) && defined(EMSCRIPTEN)
+#if defined(SHEEPSHAVER) && defined(__EMSCRIPTEN__)
 				if (check_ticks_counter++ == 50000) {
 					check_ticks_counter = 0;
 					CheckTicks();
@@ -753,7 +753,7 @@ void powerpc_cpu::execute(uint32 entry)
 		if (dump_state)
 			dump_registers();
 #endif
-#if defined(SHEEPSHAVER) && defined(EMSCRIPTEN)
+#if defined(SHEEPSHAVER) && defined(__EMSCRIPTEN__)
 		if (check_ticks_counter++ == 50000) {
 			check_ticks_counter = 0;
 			CheckTicks();

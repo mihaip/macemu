@@ -382,7 +382,7 @@ void Set_pthread_attr(pthread_attr_t *attr, int priority);
 #endif
 
 /* UAE CPU defines */
-#if defined(EMSCRIPTEN)
+#if defined(__EMSCRIPTEN__)
 static const uint32 EMSCRIPTEN_HEAP_SIZE = (1 << 28) + (1 << 25); // Matches 256MB + 32MB INITIAL_MEMORY in _emconfigure.sh
 #endif
 
@@ -452,7 +452,7 @@ static inline void do_put_mem_word(uae_u16 *a, uae_u32 v) {*a = (v >> 8) | (v <<
 
 /* Other little-endian CPUs which can not do unaligned accesses (this needs optimization) */
 static inline uae_u32 do_get_mem_long(uae_u32 *a) {
-#if defined(EMSCRIPTEN)
+#if defined(__EMSCRIPTEN__)
 	if ((uint32) a > EMSCRIPTEN_HEAP_SIZE) {
 		printf("do_get_mem_long(%p) out of bounds (EMSCRIPTEN_HEAP_SIZE=0x%x), returning 0\n", a, EMSCRIPTEN_HEAP_SIZE);
 		return 0;
@@ -462,7 +462,7 @@ static inline uae_u32 do_get_mem_long(uae_u32 *a) {
 	return (b[0] << 24) | (b[1] << 16) | (b[2] << 8) | b[3];
 }
 static inline uae_u32 do_get_mem_word(uae_u16 *a) {
-#if defined(EMSCRIPTEN)
+#if defined(__EMSCRIPTEN__)
 	if ((uint32) a > EMSCRIPTEN_HEAP_SIZE) {
 		printf("do_get_mem_word(%p) out of bounds (EMSCRIPTEN_HEAP_SIZE=0x%x), returning 0\n", a, EMSCRIPTEN_HEAP_SIZE);
 		return 0;
@@ -488,7 +488,7 @@ static inline uae_u32 do_byteswap_16(uae_u32 v)
 	{ return (((v >> 8) & 0xff) | ((v & 0xff) << 8)); }
 #endif
 
-#if defined(EMSCRIPTEN)
+#if defined(__EMSCRIPTEN__)
 static inline uae_u32 do_get_mem_byte(uae_u8 *a) {
 	if ((uint32) a > EMSCRIPTEN_HEAP_SIZE) {
 		printf("do_get_mem_byte(%p) out of bounds (EMSCRIPTEN_HEAP_SIZE=0x%x), returning 0\n", a, EMSCRIPTEN_HEAP_SIZE);
@@ -538,7 +538,7 @@ static inline uae_u32 do_get_mem_byte(uae_u8 *a) {
 #define PRECISE_TIMING 1
 #define PRECISE_TIMING_MACH 1
 #endif
-#if defined(EMSCRIPTEN)
+#if defined(__EMSCRIPTEN__)
 #define PRECISE_TIMING 1
 #define PRECISE_TIMING_EMSCRIPTEN 1
 #endif

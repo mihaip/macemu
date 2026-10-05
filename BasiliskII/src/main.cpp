@@ -40,7 +40,7 @@
 #include "prefs.h"
 #include "main.h"
 
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
 #include "pram_helpers.h"
 #endif
 
@@ -141,7 +141,7 @@ bool InitAll(const char *vmdir)
 		enable_apple_talk_in_pram(XPRAM);
 	}
 
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
 	SetDefaultAlertSound();
 #endif
 

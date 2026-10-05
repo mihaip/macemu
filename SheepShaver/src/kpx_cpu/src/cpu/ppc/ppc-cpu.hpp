@@ -513,7 +513,7 @@ inline void powerpc_cpu::trigger_interrupt()
 
 #ifdef SHEEPSHAVER
 extern void HandleInterrupt(powerpc_registers *r);
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
 extern void CheckTicks();
 #endif
 #endif

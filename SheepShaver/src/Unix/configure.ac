@@ -802,7 +802,6 @@ if [[ "x$WANT_EMSCRIPTEN" = "xyes" ]]; then
   ETHERSRC=JS/ether_js.cpp
   AUDIOSRC=JS/audio_js.cpp
   EXTRASYSSRCS="$EXTRASYSSRCS JS/input_js.cpp JS/clip_js.cpp JS/disk_js.cpp"
-  AC_DEFINE(EMSCRIPTEN, 1, [Define if targeting Emscripten.])
 fi
 
 SYSSRCS="$VIDEOSRCS $EXTFSSRC $PREFSSRC $SERIALSRC $ETHERSRC $SCSISRC $AUDIOSRC $SEMSRC $UISRCS $EXTRASYSSRCS"

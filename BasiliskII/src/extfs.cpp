@@ -1319,7 +1319,7 @@ read_next_de:
 	WriteMacInt32(pb + ioFlCrDat, TimeToMacTime(st.st_crtime));
 #elif defined __APPLE__ && defined __MACH__
 	WriteMacInt32(pb + ioFlCrDat, get_creation_time(full_path));
-#elif defined(EMSCRIPTEN)
+#elif defined(__EMSCRIPTEN__)
 	WriteMacInt32(pb + ioFlCrDat, TimeToMacTime(st.st_ctime));
 #else
 	WriteMacInt32(pb + ioFlCrDat, 0);
@@ -1446,7 +1446,7 @@ read_next_de:
 	WriteMacInt32(pb + ioFlCrDat, TimeToMacTime(st.st_crtime));
 #elif defined __APPLE__ && defined __MACH__
 	WriteMacInt32(pb + ioFlCrDat, get_creation_time(full_path));
-#elif defined(EMSCRIPTEN)
+#elif defined(__EMSCRIPTEN__)
 	WriteMacInt32(pb + ioFlCrDat, TimeToMacTime(st.st_ctime));
 #else
 	WriteMacInt32(pb + ioFlCrDat, 0);

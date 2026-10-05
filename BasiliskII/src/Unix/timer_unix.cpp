@@ -24,7 +24,7 @@
 
 #include <errno.h>
 
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include "JS/input_js.h"
 #endif
@@ -359,7 +359,7 @@ static int idle_sem_ok = -1;
 
 void idle_wait(void)
 {
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
 	int has_input = EM_ASM_INT_V({
 		return workerApi.idleWait();
 	});
@@ -388,7 +388,7 @@ void idle_wait(void)
 	Delay_usec(10000);
 #endif // IDLE_USES_COND_WAIT
 #endif // IDLE_USES_SEMAPHORE
-#endif // EMSCRIPTEN
+#endif // __EMSCRIPTEN__
 }
 
 
@@ -398,7 +398,7 @@ void idle_wait(void)
 
 void idle_resume(void)
 {
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
 	// Nothing is required for Emscripten
 #else
 #ifdef IDLE_USES_COND_WAIT
@@ -415,5 +415,5 @@ void idle_resume(void)
 	UNLOCK_IDLE;
 #endif // IDLE_USES_COND_WAIT
 #endif // IDLE_USES_SEMAPHORE
-#endif // EMSCRIPTEN
+#endif // __EMSCRIPTEN__
 }

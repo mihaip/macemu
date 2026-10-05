@@ -434,7 +434,7 @@ typedef struct timeval tm_time_t;
 #define PRECISE_TIMING 1
 #define PRECISE_TIMING_MACH 1
 #endif
-#if defined(EMSCRIPTEN)
+#if defined(__EMSCRIPTEN__)
 #define PRECISE_TIMING 1
 #define PRECISE_TIMING_EMSCRIPTEN 1
 #endif

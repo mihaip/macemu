@@ -34,7 +34,7 @@
 #endif
 #endif
 
-#if !defined(USE_SDL_VIDEO) && !defined(EMSCRIPTEN)
+#if !defined(USE_SDL_VIDEO) && !defined(__EMSCRIPTEN__)
 # include <X11/Xlib.h>
 #endif
 
@@ -97,7 +97,7 @@ using std::string;
 #include "sigsegv.h"
 #include "rpc.h"
 
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
 #include <emscripten.h>
 #include "JS/input_js.h"
 #include "JS/audio_js.h"
@@ -150,7 +150,7 @@ bool TwentyFourBitAddressing;
 
 
 // Global variables
-#if !defined(USE_SDL_VIDEO) && !defined(EMSCRIPTEN)
+#if !defined(USE_SDL_VIDEO) && !defined(__EMSCRIPTEN__)
 extern char *x_display_name;						// X11 display name
 extern Display *x_display;							// X11 display handle
 #ifdef X11_LOCK_TYPE
@@ -347,7 +347,7 @@ void cpu_do_check_ticks(void)
 	n_check_ticks++;
 #endif
 
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
 	static bool js_frequent_read_input = PrefsFindBool("jsfrequentreadinput");
 	if (js_frequent_read_input) {
 		ReadJSInput(emulated_ticks_current);
@@ -375,7 +375,7 @@ void cpu_do_check_ticks(void)
 	// Check for interrupt opportunity
 	now = GetTicks_usec();
 	if (next < now) {
-#ifdef EMSCRIPTEN
+#ifdef __EMSCRIPTEN__
 		if (!js_frequent_read_input) {
 			ReadJSInput(emulated_ticks_current);
 			AudioRefresh();
@@ -461,7 +461,7 @@ int main(int argc, char **argv)
 	for (int i=1; i<argc; i++) {
 		if (strcmp(argv[i], "--help") == 0) {
 			usage(argv[0]);
-#if !defined(USE_SDL_VIDEO) && !defined(EMSCRIPTEN)
+#if !defined(USE_SDL_VIDEO) && !defined(__EMSCRIPTEN__)
 		} else if (strcmp(argv[i], "--display") == 0) {
 			i++; // don't remove the argument, gtk_init() needs it too
 			if (i < argc)
@@ -562,7 +562,7 @@ int main(int argc, char **argv)
 		}
 	}
 
-#if !defined(USE_SDL_VIDEO) && !defined(EMSCRIPTEN)
+#if !defined(USE_SDL_VIDEO) && !defined(__EMSCRIPTEN__)
 	// Open display
 	x_display = XOpenDisplay(x_display_name);
 	if (x_display == NULL) {
@@ -578,7 +578,7 @@ int main(int argc, char **argv)
 #endif
 #endif
 
-#ifndef EMSCRIPTEN
+#ifndef __EMSCRIPTEN__
 #ifdef USE_SDL
 	// Initialize SDL system
 	int sdl_flags = 0;
@@ -608,7 +608,7 @@ int main(int argc, char **argv)
 #endif
 	
 #endif
-#endif // not EMSCRIPTEN
+#endif // not __EMSCRIPTEN__
 
 	// Init system routines
 	SysInit();
@@ -618,7 +618,7 @@ int main(int argc, char **argv)
 		if (!PrefsEditor())
 			QuitEmulator();
 
-#ifndef EMSCRIPTEN
+#ifndef __EMSCRIPTEN__
 	// Install the handler for SIGSEGV
 	if (!sigsegv_install_handler(sigsegv_handler)) {
 		sprintf(str, GetString(STR_SIG_INSTALL_ERR), "SIGSEGV", strerror(errno));
@@ -628,7 +628,7 @@ int main(int argc, char **argv)
 	
 	// Register dump state function when we got mad after a segfault
 	sigsegv_set_dump_state(sigsegv_dump_state);
-#endif // not EMSCRIPTEN
+#endif // not __EMSCRIPTEN__
 
 	// Read RAM size
 	RAMSize = PrefsFindInt32("ramsize");
@@ -1013,7 +1013,7 @@ void QuitEmulator(void)
 	PrefsExit();
 
 	// Close X11 server connection
-#if !defined(USE_SDL_VIDEO) && !defined(EMSCRIPTEN)
+#if !defined(USE_SDL_VIDEO) && !defined(__EMSCRIPTEN__)
 	if (x_display)
 		XCloseDisplay(x_display);
 #endif
@@ -1082,7 +1082,7 @@ static void sigint_handler(...)
 void Set_pthread_attr(pthread_attr_t *attr, int priority)
 {
 	pthread_attr_init(attr);
-#ifndef EMSCRIPTEN
+#ifndef __EMSCRIPTEN__
 #if defined(_POSIX_THREAD_PRIORITY_SCHEDULING)
 	// Some of these only work for superuser
 	if (geteuid() == 0) {
@@ -1104,7 +1104,7 @@ void Set_pthread_attr(pthread_attr_t *attr, int priority)
 #endif
 	}
 #endif
-#endif // ifndef EMSCRIPTEN
+#endif // ifndef __EMSCRIPTEN__
 }
 #endif // HAVE_PTHREADS
 
@@ -1277,7 +1277,7 @@ static void one_tick(...)
 {
 	static int tick_counter = 0;
 	if (++tick_counter > 60) {
-#if defined(EMSCRIPTEN)
+#if defined(__EMSCRIPTEN__)
 		CheckPRAM();
 #endif
 		tick_counter = 0;
@@ -1289,7 +1289,7 @@ static void one_tick(...)
 	VideoRefresh();
 #endif
 
-#if !defined(HAVE_PTHREADS) && !defined(EMSCRIPTEN)
+#if !defined(HAVE_PTHREADS) && !defined(__EMSCRIPTEN__)
 	// No threads available, perform networking from here. We trigger Ethernet
 	// interrupts more directly with Emscripten.
 	SetInterruptFlag(INTFLAG_ETHER);
@@ -1301,7 +1301,7 @@ static void one_tick(...)
 		TriggerInterrupt();
 	}
 
-#if defined(EMSCRIPTEN)
+#if defined(__EMSCRIPTEN__)
 	if (!HasIdleTime()) {
 		FallbackSleep();
 	}
