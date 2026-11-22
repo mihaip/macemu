@@ -178,7 +178,7 @@ static const ext2type e2t_translation[] = {
 	{".mid", FOURCC('M','I','D','I'), FOURCC('T','V','O','D')},
 	{".midi", FOURCC('M','I','D','I'), FOURCC('T','V','O','D')},
 	{".mp2", FOURCC('M','P','G',' '), FOURCC('T','V','O','D')},
-	{".mp3", FOURCC('M','P','G',' '), FOURCC('T','V','O','D')},
+	{".mp3", FOURCC('M','P','E','G'), FOURCC('T','V','O','D')},
 	{".wav", FOURCC('W','A','V','E'), FOURCC('T','V','O','D')},
 	{".bmp", FOURCC('B','M','P','f'), FOURCC('o','g','l','e')},
 	{".gif", FOURCC('G','I','F','f'), FOURCC('o','g','l','e')},
@@ -292,7 +292,7 @@ uint32 get_rfork_size(const char *path)
 
 	// Get size
 	off_t size = lseek(fd, 0, SEEK_END);
-	
+
 	// Close file and return size
 	close(fd);
 	return size < 0 ? 0 : size;
