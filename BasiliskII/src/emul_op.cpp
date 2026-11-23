@@ -42,6 +42,10 @@
 #include "extfs.h"
 #include "emul_op.h"
 
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#endif
+
 #ifdef ENABLE_MON
 #include "mon.h"
 #endif
@@ -546,6 +550,14 @@ void EmulOp(uint16 opcode, M68kRegisters *r)
 			uint8 *p = Mac2HostAddr(adr);
 			uint32 size = ReadMacInt32(adr - 8) & 0xffffff;
 			CheckLoad(type, id, p, size);
+#ifdef __EMSCRIPTEN__
+			// A0 holds the resource Handle (a pointer to its data pointer); A2
+			// points to the resource's ReferenceEntry in its resource map.
+			EM_ASM({
+				workerApi.resources?.resourceLoaded(
+					HEAPU8.subarray($0, $0 + $1), $2, $3, $4, $5);
+			}, RAMBaseHost, RAMSize, type, id, r->a[0], r->a[2]);
+#endif
 			break;
 		}
 
