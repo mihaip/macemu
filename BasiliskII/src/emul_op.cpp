@@ -554,9 +554,15 @@ void EmulOp(uint16 opcode, M68kRegisters *r)
 			// A0 holds the resource Handle (a pointer to its data pointer); A2
 			// points to the resource's ReferenceEntry in its resource map.
 			EM_ASM({
-				workerApi.resources?.resourceLoaded(
-					HEAPU8.subarray($0, $0 + $1), $2, $3, $4, $5);
-			}, RAMBaseHost, RAMSize, type, id, r->a[0], r->a[2]);
+					workerApi.resources?.resourceLoaded(
+						[
+							{baseAddress: $2 >>> 0, data: HEAPU8.subarray($0, $0 + $1), kind: "ram"},
+							{baseAddress: $5 >>> 0, data: HEAPU8.subarray($3, $3 + $4), kind: "rom"}
+						], $6, $7, $8, $9);
+				},
+				RAMBaseHost, RAMSize, RAMBaseMac,
+				ROMBaseHost, ROMSize, ROMBaseMac,
+				type, id, r->a[0], r->a[2]);
 #endif
 			break;
 		}
