@@ -558,11 +558,11 @@ void EmulOp(uint16 opcode, M68kRegisters *r)
 						[
 							{baseAddress: $2 >>> 0, data: HEAPU8.subarray($0, $0 + $1), kind: "ram"},
 							{baseAddress: $5 >>> 0, data: HEAPU8.subarray($3, $3 + $4), kind: "rom"}
-						], $6, $7, $8, $9);
+						], $6, $7);
 				},
 				RAMBaseHost, RAMSize, RAMBaseMac,
 				ROMBaseHost, ROMSize, ROMBaseMac,
-				type, id, r->a[0], r->a[2]);
+				r->a[0], r->a[2]);
 #endif
 			break;
 		}
